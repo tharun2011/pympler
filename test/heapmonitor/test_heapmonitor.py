@@ -27,7 +27,7 @@ import unittest
 import gc
 import StringIO
 
-from pympler.tracker.heapmonitor import *
+from pympler.heapmonitor import *
 
 class Foo:
     def __init__(self):
@@ -187,18 +187,18 @@ class SnapshotTestCase(unittest.TestCase):
     def test_background_monitoring(self):
         """Test background monitoring.
         """
-        import pympler.tracker.heapmonitor
+        import pympler.heapmonitor
 
         start_periodic_snapshots(0.1)
-        assert pympler.tracker.heapmonitor._periodic_thread.interval == 0.1
-        assert pympler.tracker.heapmonitor._periodic_thread.getName() is 'BackgroundMonitor'
+        assert pympler.heapmonitor.heapmonitor._periodic_thread.interval == 0.1
+        assert pympler.heapmonitor.heapmonitor._periodic_thread.getName() is 'BackgroundMonitor'
         for x in xrange(10): # try to interfere
             create_snapshot()
         time.sleep(0.5)
         start_periodic_snapshots(0.2)
-        assert pympler.tracker.heapmonitor._periodic_thread.interval == 0.2
+        assert pympler.heapmonitor.heapmonitor._periodic_thread.interval == 0.2
         stop_periodic_snapshots()
-        assert pympler.tracker.heapmonitor._periodic_thread is None
+        assert pympler.heapmonitor.heapmonitor._periodic_thread is None
         assert len(footprint) > 10
 
 

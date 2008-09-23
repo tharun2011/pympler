@@ -28,7 +28,7 @@ size of the object is sampled when taking a snapshot.
 
 To track the size of an individual object::
     
-    from pympler.tracker import heapmonitor
+    from pympler import heapmonitor
     obj = MyObject()
     heapmonitor.track_object(obj)
 
@@ -138,7 +138,7 @@ the output noise to a manageable magnitude.
 The following example reads the dumped data and prints the ten largest Node
 objects to the standard output::
 
-    from pympler.tracker.heapmonitor import MemStats
+    from pympler.heapmonitor import MemStats
 
     stats = MemStats()
     stats.load('heap.dat')
@@ -155,7 +155,7 @@ by specifying a file with the extension *.html* file as the profiling output::
 
 However, you can also reprocess a previously generated dump::
 
-    from pympler.tracker.heapmonitor import HtmlStats
+    from pympler.heapmonitor import HtmlStats
 
     stats = HtmlStats('heap-profile.dat')
     stats.create_html('heap-profile.html')
