@@ -9,7 +9,7 @@ from pympler.muppy import muppy
 try:
     from sys import getsizeof as _getsizeof
 except ImportError:
-    from pympler.sizer.asizeof import flatsize
+    from pympler.asizeof import flatsize
     _getsizeof = flatsize
     
 class MuppyTest(unittest.TestCase):
