@@ -1,8 +1,8 @@
 import doctest
 import unittest
 
-import pympler.tracker.muppy
-from pympler.tracker.muppy import summary
+import pympler.muppy
+from pympler.muppy import summary
 
 # default to asizeof if sys.getsizeof is not available (prior to Python 2.6)
 try:
