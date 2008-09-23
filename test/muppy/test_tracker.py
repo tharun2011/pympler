@@ -2,8 +2,8 @@ import gc
 import sys
 import unittest
 
-from pympler.tracker.muppy import summary
-from pympler.tracker.muppy import tracker
+from pympler.muppy import summary
+from pympler.muppy import tracker
 
 # used to create an indicattor object to track changes between snapshots
 import bz2

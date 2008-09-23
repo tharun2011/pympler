@@ -1,8 +1,7 @@
 import doctest
 import unittest
-import test.test_support
 
-from pympler.tracker.muppy import refbrowser
+from pympler.muppy import refbrowser
 
 class TreeTest(unittest.TestCase):
 
