@@ -7,6 +7,7 @@ Below you can find a complete overview of all pages of this documentation.
 
    intro
    heapmonitor
+   muppy/muppy
    related
    glossary
    changes
