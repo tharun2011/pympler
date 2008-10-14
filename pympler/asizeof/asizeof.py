@@ -511,7 +511,7 @@ def _dict_refs(obj, named):
         for k, v in _items(obj):
             s = str(k)
             yield _NamedRef('[K] ' + s, k)
-            yield _NamedRef('[V] ' + s, v)
+            yield _NamedRef('[V] ' + s + ': ' + _repr(v), v)
     else:
         for k, v in _items(obj):
             yield k
