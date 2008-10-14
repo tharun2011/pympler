@@ -350,7 +350,8 @@ class LogTestCase(unittest.TestCase):
         stats.print_stats(filter='Bar',limit=0.5)
         assert len(stats.sorted) == tolen
         stats.print_summary()
-        assert f3.getvalue()[:12] == '__main__.Bar'
+        clsname = f3.getvalue().split(' ')[0]
+        assert clsname[-4:] == '.Bar', clsname
         assert len(f3.getvalue()) < len(f1.getvalue())
 
         f1.close()
