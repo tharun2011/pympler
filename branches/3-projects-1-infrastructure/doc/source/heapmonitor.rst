@@ -7,6 +7,8 @@ Heapmonitor Documentation
 Introduction
 ------------
 
+.. automodule:: pympler.tracker.heapmonitor
+
 The Heapmonitor is a facility delivering insight into the memory distribution
 of a Python program. It provides facilities to track and size individual
 objects or all instances of certain classes.
@@ -41,7 +43,9 @@ instances of a class can automatically be tracked with *track_class*::
     heapmonitor.track_class(MyClass)
 
 All instances of `MyClass` (or a class that inherits from `MyClass`) created
-hereafter are tracked. 
+hereafter are tracked.
+
+.. autofunction:: track_class
 
 Tracked Object Snapshot
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -57,6 +61,8 @@ tracked objects::
 
 With this information, the distribution of the allocated memory can be
 apportioned to tracked classes and instances.
+
+.. autofunction:: create_snapshot
 
 Advanced Functionality
 ----------------------
@@ -84,7 +90,8 @@ resolution level can also be set for all instances of a class::
 
     heapmonitor.track_class(MyObject, resolution_level=1)
 
-..
+.. warning::
+
     Please note the per-referent sizing is very memory and computationally
     intensive. The recorded meta-data must be stored for each referent of a tracked
     object which might easily quadruplicate the memory footprint of the build.
@@ -115,10 +122,15 @@ associated with any tracked object. ::
 
     heapmonitor.start_periodic_snapshots(interval=0.1)
 
-..
+.. warning::
+
     Take care if you use automatic snapshots with tracked objects. The sizing
     of individual objects might be inconsistent when memory is allocated or freed
     while the snapshot is being taken.
+
+.. autofunction:: start_periodic_snapshots
+
+.. autofunction:: stop_periodic_snapshots
 
 Off-line Analysis
 ~~~~~~~~~~~~~~~~~
@@ -129,7 +141,7 @@ off-line analysis::
 
     heapmonitor.dump_stats('heap-profile.dat')
 
-The !MemStats class of the Heapmonitor provides means to evaluate the collected
+The `MemStats` class of the Heapmonitor provides means to evaluate the collected
 data. The API is inspired by the `Stats class
 <http://docs.python.org/lib/profile-stats.html>`_ of the Python profiler. It is
 possible to sort the data based on user preferences, filter by class and limit
@@ -143,6 +155,14 @@ objects to the standard output::
     stats = MemStats()
     stats.load('heap.dat')
     stats.sort_stats('size').print_stats(limit=10, filter='Node')
+
+.. autoclass:: MemStats
+
+..
+   .. automethod:: load
+   .. automethod:: sort_stats
+   .. automethod:: print_stats
+   .. automethod:: dump_stats
 
 HTML Statistics
 ~~~~~~~~~~~~~~~
@@ -159,6 +179,8 @@ However, you can also reprocess a previously generated dump::
 
     stats = HtmlStats('heap-profile.dat')
     stats.create_html('heap-profile.html')
+
+.. autoclass:: HtmlStats
 
 Tracking Garbage
 ----------------
