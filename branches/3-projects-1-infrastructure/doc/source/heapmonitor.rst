@@ -7,7 +7,7 @@ Heapmonitor Documentation
 Introduction
 ------------
 
-.. automodule:: pympler.tracker.heapmonitor
+.. automodule:: pympler.heapmonitor.heapmonitor
 
 The Heapmonitor is a facility delivering insight into the memory distribution
 of a Python program. It provides facilities to track and size individual
