@@ -34,6 +34,8 @@ To track the size of an individual object::
     obj = MyObject()
     heapmonitor.track_object(obj)
 
+.. autofunction:: track_object
+
 Class Tracking
 ~~~~~~~~~~~~~~
 
@@ -157,12 +159,7 @@ objects to the standard output::
     stats.sort_stats('size').print_stats(limit=10, filter='Node')
 
 .. autoclass:: MemStats
-
-..
-   .. automethod:: load
-   .. automethod:: sort_stats
-   .. automethod:: print_stats
-   .. automethod:: dump_stats
+   :members: load_stats, sort_stats, print_stats, dump_stats, reverse_order
 
 HTML Statistics
 ~~~~~~~~~~~~~~~
@@ -181,6 +178,7 @@ However, you can also reprocess a previously generated dump::
     stats.create_html('heap-profile.html')
 
 .. autoclass:: HtmlStats
+   :members: create_html
 
 Tracking Garbage
 ----------------
