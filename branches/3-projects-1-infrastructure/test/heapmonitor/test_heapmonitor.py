@@ -366,6 +366,7 @@ class GarbageTestCase(unittest.TestCase):
         gc.set_debug(gc.DEBUG_SAVEALL)
 
     def tearDown(self):
+        gc.set_debug(gc.DEBUG_OBJECTS)
         gc.enable()
 
     def test_findgarbage(self):
