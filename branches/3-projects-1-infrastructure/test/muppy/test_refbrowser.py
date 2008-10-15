@@ -79,9 +79,10 @@ class TreeTest(unittest.TestCase):
         # test if the str_func is applied correctly
         expected = 'the quick brown fox'
         def foo(o): return expected
-        res = refbrowser.RefBrowser(root, str_func=foo).get_tree()
+        res = refbrowser.RefBrowser(root, str_func=foo, maxdepth=2).get_tree()
         self.assert_(str(res) == expected)
-        res = refbrowser.RefBrowser(root, str_func=foo, repeat=True).get_tree()
+        res = refbrowser.RefBrowser(root, str_func=foo, repeat=True,\
+                                    maxdepth=2).get_tree()
         self.assert_(str(res) == expected)
 
         
