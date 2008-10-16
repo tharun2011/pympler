@@ -9,14 +9,25 @@ Introduction
 
 .. automodule:: pympler.heapmonitor.heapmonitor
 
-The Heapmonitor is a facility delivering insight into the memory distribution
-of a Python program. It provides facilities to track and size individual
-objects or all instances of certain classes.
-
 Usage
 -----
 
-TODO
+The basic tools of the Heapmonitor are tracking objects or classes, taking
+snapshots, and printing or dumping statistics. The first step is to decide what
+to track. Then spots of interest for snapshot creation have to be identified.
+Finally, the gathered data can be printed or saved::
+
+    from pympler import heapmonitor
+    
+    heapmonitor.track_class(Employee)
+    heapmonitor.track_object(factory)
+
+    allocate_employees()
+    heapmonitor.create_snapshot()
+    populate_factory()
+    heapmonitor.create_snapshot()
+
+    heapmonitor.print_stats()
 
 Basic Functionality
 -------------------
@@ -65,6 +76,11 @@ With this information, the distribution of the allocated memory can be
 apportioned to tracked classes and instances.
 
 .. autofunction:: create_snapshot
+
+Print Statistics
+~~~~~~~~~~~~~~~~
+
+.. autofunction:: print_stats
 
 Advanced Functionality
 ----------------------
@@ -187,24 +203,48 @@ Garbage occurs if objects refer too each other in a circular fashion. Such
 reference cycles cannot be freed automatically and must be collected by the
 garbage collector. While it is sometimes hard to avoid creating reference
 cycles, preventing such cycles saves garbage collection time and limits the
-lifetime of objects.
+lifetime of objects. Moreover, some objects cannot be collected by the garbage
+collector.
 
-The Heapmonitor provides special flags to analyze reference cycles. When ... is
-invoked, the garbage collector is turned off and the garbage objects are
-printed::
+The Heapmonitor provides functions to analyze reference cycles of collectable
+objects. When the garbage collector is turned off, the garbage can be kept for
+debugging purposes::
 
-    TODO
+    from pympler import heapmonitor
+
+    heapmonitor.start_debug_garbage()
+
+    l = []
+    l.append(l) # produce cycle
+
+    heapmonitor.print_garbage_stats()
+    heapmonitor.end_debug_garbage()
+
 
 Reference cycles can be visualized with `graphviz <http://www.graphviz.org>`_.
-A graphviz input file is generated when ... ::
+A graphviz input file is generated when  ::
 
-    TODO
+    from pympler import heapmonitor
+
+    heapmonitor.start_debug_garbage()
+
+    l = []
+    l.append(l) # produce cycle
+
+    heapmonitor.visualize_ref_cycles('leakgraph.txt')
+    heapmonitor.end_debug_garbage()
+
 
 The graph file can be turned into a PDF with the following commands (Linux)::
 
     dot -o leakgraph.dot leakgraph.txt
     dot leakgraph.dot -Tps -o leakgraph.eps
     epstopdf leakgraph.eps
+
+.. autofunction:: start_debug_garbage
+.. autofunction:: end_debug_garbage
+.. autofunction:: print_garbage_stats
+.. autofunction:: visualize_ref_cycles
 
 Limitations and Corner Cases
 ----------------------------
