@@ -1155,9 +1155,12 @@ def dump_stats(file, close=1):
 
 def print_stats(file=sys.stdout):
     """
-    Write tracked objects by class to stdout. Stop asynchronous snapshots to
-    prevent the data of changing while being printed. The side effect are lags,
-    especially when a long period has been set. 
+    Write tracked objects by class to stdout. The size for each tracked object
+    is printed and a per-snapshot summary is printed. 
+    
+    If background monitoring is activated, stop asynchronous snapshots to
+    prevent the data of changing while being printed. The side effect can be
+    lags, especially when a long period has been set. 
     """
     stop_periodic_snapshots()
     stats = MemStats(stream=file, tracked_index=tracked_index, footprint=footprint)

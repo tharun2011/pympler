@@ -80,6 +80,10 @@ apportioned to tracked classes and instances.
 Print Statistics
 ~~~~~~~~~~~~~~~~
 
+The gathered data can be investigated with `print_stats`. This prints all
+available data. To filter and limit the output the more powerful "Off-line
+analysis" API can be used instead.
+
 .. autofunction:: print_stats
 
 Advanced Functionality
@@ -222,7 +226,7 @@ debugging purposes::
 
 
 Reference cycles can be visualized with `graphviz <http://www.graphviz.org>`_.
-A graphviz input file is generated when  ::
+A graphviz input file is generated when `visualize_ref_cycles` is invoked::
 
     from pympler import heapmonitor
 
@@ -235,7 +239,7 @@ A graphviz input file is generated when  ::
     heapmonitor.end_debug_garbage()
 
 
-The graph file can be turned into a PDF with the following commands (Linux)::
+On Linux, the graph file can be turned into a PDF with the following commands::
 
     dot -o leakgraph.dot leakgraph.txt
     dot leakgraph.dot -Tps -o leakgraph.eps
