@@ -1,14 +1,13 @@
-"""Heapmonitor
-
-Facility to introspect memory consumption of certain classes and objects.
-Tracked objects are sized recursively to provide an overview of memory
-distribution between the different tracked objects.
-
+"""
+The Heapmonitor is a facility delivering insight into the memory distribution of
+a Python program. It can introspect memory consumption of certain classes and
+objects. Facilities are provided to track and size individual objects or all
+instances of certain classes. Tracked objects are sized recursively to provide
+an overview of memory distribution between the different tracked objects.
 """
 
 #
-# FIXME __COPYRIGHT__
-#
+#    Copyright 2008 Ludwig Haehne
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -23,17 +22,7 @@ distribution between the different tracked objects.
 #    limitations under the License.
 # 
 
-#
-# The meta programming techniques used to trace object construction requires
-# nested scopes introduced in Python 2.2. For Python 2.1 compliance,
-# nested_scopes are imported from __future__.
-#
-from __future__ import nested_scopes
-
-#__revision__ = "__FILE__ __REVISION__ __DATE__ __DEVELOPER__"
-
-# FIXME Get set type in Python 2.2/2.3.
-#import SCons.compat
+# TODO Provide set type for Python 2.2/2.3 compliance.
 
 import sys
 import time
@@ -46,7 +35,6 @@ import cPickle
 import gc
 
 import pympler.asizeof as asizeof
-#from SCons.Debug import memory
 
 # Dictionaries of TrackedObject objects associated with the actual objects that
 # are tracked. 'tracked_index' uses the class name as the key and associates a
@@ -521,6 +509,34 @@ else:
 # Snapshots
 #
 
+# Get memory allocated to the process. How to get hold of this information is
+# platform specific. First try to use the resource module. If that does not
+# exist, try a fallback for Windows. If 0 is returned (Linux), try to read the
+# stat file. If all fails, return 0.
+try:
+    import resource
+    def memory():
+        res = resource.getrusage(resource.RUSAGE_SELF)[4]
+        if res == 0:
+            stat = open('/proc/self/stat')
+            if stat:
+                res = int( stat.read().split()[22] )
+        return res
+
+except ImportError:
+    try:
+        from win32process import GetProcessMemoryInfo
+        from win32api import GetCurrentProcess
+    except ImportError:
+        def memory():
+            return 0
+    else:
+        def memory():
+            process_handle = GetCurrentProcess()
+            memory_info = GetProcessMemoryInfo( process_handle )
+            return memory_info['PeakWorkingSetSize']
+
+
 class Footprint:
     pass
 
@@ -564,7 +580,7 @@ def create_snapshot(description=''):
             fp.asizeof_total = asizeof.asizeof(all=True, code=True)
         else:
             fp.asizeof_total = 0
-        fp.system_total = 0 #memory() FIXME
+        fp.system_total = memory()
         fp.desc = str(description)
 
         # Compute overhead of all structures, use sizer to exclude tracked objects(!)
@@ -1170,8 +1186,6 @@ def print_snapshots(file=sys.stdout):
 # meaningful and user-friendly way.
 #
 
-graphviz_file = None
-
 class Garbage:
     pass
 
@@ -1306,23 +1320,49 @@ def find_garbage(sizer=None, graphfile=None, prune=1):
 
     return total, garbage
 
+
+def start_debug_garbage():
+    """
+    Turn off garbage collector to analyze *collectable* reference cycles.
+    """
+    gc.collect()
+    gc.disable()
+
+
+def end_debug_garbage():
+    """
+    Turn garbage collection on and disable debug output.
+    """
+    gc.set_debug(0)
+    gc.enable()
+
+
 def print_garbage_stats(file=sys.stdout):
     """
     Print statistics related to garbage/leaks.
+    This function collects the reported garbage. Therefore, subsequent
+    invocations of `print_garbage_stats` will not report the same objects again.
     """
-
-    f = None
-    if graphviz_file:
-        f = open(graphviz_file, 'w')
-
     sizer = asizeof.Asizer()
-    total, garbage = find_garbage(sizer, f)
+    total, garbage = find_garbage(sizer)
     sz = sizer.total
 
     cnt = len(garbage)
-    if cnt and graphviz_file:
-        file.write("Garbage reference graph saved to: %s\n" % graphviz_file)
-    elif cnt:
+    if cnt:
         _log_garbage(garbage, file)
     file.write('Garbage: %8d collected objects (%6d in cycles): %12s\n' % (total, cnt, _pp(sz)))
 
+
+def visualize_ref_cycles(fname):
+    """
+    Print reference cycles of collectable garbage to a file which can be
+    processed by Graphviz.
+    This function collects the reported garbage. Therefore, subsequent
+    invocations of `print_garbage_stats` will not report the same objects again.
+    """
+    file = open(fname, 'w')
+    sizer = asizeof.Asizer()
+    total, garbage = find_garbage(sizer, file)
+    file.close()
+
+    

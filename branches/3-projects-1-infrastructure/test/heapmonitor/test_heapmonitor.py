@@ -170,6 +170,24 @@ class SnapshotTestCase(unittest.TestCase):
             ts = [t for (t,sz) in to.footprint[1:]]
             assert ts == refts
 
+    def test_snapshot_members(self):
+        """Test existence and value of snapshot members.
+        """
+        foo = Foo()
+        track_object(foo)
+        create_snapshot()
+
+        fp = footprint[0]
+        assert fp.system_total > 0
+        assert fp.overhead > 0
+        assert fp.tracked_total > 0
+        assert fp.asizeof_total > 0
+
+        assert fp.system_total > fp.overhead
+        assert fp.system_total > fp.tracked_total
+        assert fp.system_total > fp.asizeof_total
+        assert fp.asizeof_total >= fp.tracked_total
+
     def test_desc(self):
         """Test footprint description.
         """
