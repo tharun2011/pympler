@@ -802,10 +802,17 @@ class MemStats:
                 (_trunc(fp.desc, 35), 'active', _pp(fp.asizeof_total), 
                  'average', 'pct'))
             for classname in classlist:
-                info = fp.classes[classname]
-                sum, avg, pct, active = info['sum'], info['avg'], info['pct'], info['active']
-                file.write('  %-33s %11d %12s %12s %4d%%\n' % \
-                    (_trunc(classname, 33), active, _pp(sum), _pp(avg), pct))
+                try:
+                    info = fp.classes[classname]
+                except KeyError:
+                    # No such class in this snapshot, if print_stats is called
+                    # multiple times there may exist older annotations in
+                    # earlier snapshots.
+                    pass 
+                else:
+                    sum, avg, pct, active = info['sum'], info['avg'], info['pct'], info['active']
+                    file.write('  %-33s %11d %12s %12s %4d%%\n' % \
+                        (_trunc(classname, 33), active, _pp(sum), _pp(avg), pct))
         file.write('-'*79+'\n')
 
 class HtmlStats(MemStats):
