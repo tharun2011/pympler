@@ -116,6 +116,21 @@ class TrackObjectTestCase(unittest.TestCase):
         assert tracked_objects[idfoo].ref() is not None
         assert tracked_objects[idbar].ref() is None
 
+    def test_mixed_tracking(self):
+        """Test mixed instance and class tracking.
+        """
+        f = StringIO.StringIO()
+        foo = Foo()
+        track_object(foo)
+        create_snapshot()
+        print_stats(file=f)
+        track_class(Foo)
+        objs = []
+        for x in xrange(10):
+            objs.append(Foo())
+        create_snapshot()
+        print_stats(file=f)
+
     def test_recurse(self):
         """Test recursive sizing and saving of referents.
         """
