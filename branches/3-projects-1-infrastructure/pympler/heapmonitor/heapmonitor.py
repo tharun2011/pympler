@@ -1160,10 +1160,11 @@ def dump_stats(file, close=1):
         stats = MemStats(tracked_index=tracked_index, footprint=footprint)
         stats.dump_stats(file, close)
 
-def print_stats(file=sys.stdout):
+def print_stats(file=sys.stdout, detailed=1):
     """
     Write tracked objects by class to stdout. The size for each tracked object
-    is printed and a per-snapshot summary is printed. 
+    is printed and a per-snapshot summary is printed. If `detailed` is set to
+    false, the per object statistics are omitted.
     
     If background monitoring is activated, stop asynchronous snapshots to
     prevent the data of changing while being printed. The side effect can be
@@ -1171,7 +1172,8 @@ def print_stats(file=sys.stdout):
     """
     stop_periodic_snapshots()
     stats = MemStats(stream=file, tracked_index=tracked_index, footprint=footprint)
-    stats.print_stats()
+    if detailed:
+        stats.print_stats()
     stats.print_summary()
 
 def print_snapshots(file=sys.stdout):

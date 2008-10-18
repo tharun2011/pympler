@@ -12,22 +12,51 @@ Introduction
 Usage
 -----
 
+Let's start with a simple example. Suppose you have this module::
+
+    >>> class Employee:
+    ...    pass
+    ...    
+    >>> class Factory:
+    ...    pass
+    ...
+    >>> def create_factory():
+    ...    factory = Factory()
+    ...    factory.name = "Assembly Line Unlimited"
+    ...    factory.employees = []
+    ...    return factory
+    ...
+    >>> def populate_factory(factory):
+    ...    for x in xrange(1000):
+    ...        worker = Employee()
+    ...        worker.assigned = factory.name
+    ...        factory.employees.append(worker)
+    ...
+    >>> factory = create_factory()
+    >>> populate_factory(factory)
+
 The basic tools of the Heapmonitor are tracking objects or classes, taking
 snapshots, and printing or dumping statistics. The first step is to decide what
 to track. Then spots of interest for snapshot creation have to be identified.
 Finally, the gathered data can be printed or saved::
-
-    from pympler import heapmonitor
     
-    heapmonitor.track_class(Employee)
-    heapmonitor.track_object(factory)
+    >>> factory = create_factory()
+    >>> from pympler import heapmonitor
+    >>> heapmonitor.track_object(factory)
+    >>> heapmonitor.track_class(Employee)
+    >>> heapmonitor.create_snapshot()
+    >>> populate_factory(factory)
+    >>> heapmonitor.create_snapshot()
+    >>> heapmonitor.print_stats(detailed=0)
+    ---- SUMMARY ------------------------------------------------------------------
+                                             active      1.22 MB      average   pct
+      Factory                                     1    344     B    344     B    0%
+      __main__.Employee                           0      0     B      0     B    0%
+                                             active      1.42 MB      average   pct
+      Factory                                     1      4.75 KB      4.75 KB    0%
+      __main__.Employee                        1000    195.38 KB    200     B   13%
+    -------------------------------------------------------------------------------
 
-    allocate_employees()
-    heapmonitor.create_snapshot()
-    populate_factory()
-    heapmonitor.create_snapshot()
-
-    heapmonitor.print_stats()
 
 Basic Functionality
 -------------------
