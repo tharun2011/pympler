@@ -687,9 +687,9 @@ class MemStats:
         consuming items first), whereas name, repr, and creation time searches
         are in ascending order (alphabetical).
 
-        The function returns self to allow calling functions on the result:
+        The function returns self to allow calling functions on the result::
 
-        >>> stats.sort_stats('size').reverse_order().print_stats()
+            stats.sort_stats('size').reverse_order().print_stats()
         """
 
         criteria = ('classname', 'tsize', 'birth', 'death', 
