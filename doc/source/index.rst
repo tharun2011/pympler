@@ -16,6 +16,7 @@ Quick Links
 
 Table of Content
 ================
+- :ref:`asizeof` - a description of the asizeof module
 - :ref:`heapmonitor` - a description of the heap monitor module
 - :ref:`muppy` - a description of the muppy module
 - :ref:`related_work` - Other projects which deal which memory profiling in
