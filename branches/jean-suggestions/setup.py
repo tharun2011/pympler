@@ -8,8 +8,7 @@ the files are removed afterwards.
 from distutils.core import setup
 import os
 import shutil
-
-from pympler import metadata
+import metadata
 
 doc_dir = 'doc'
 compiled_doc_dir = os.path.join(doc_dir, 'build', 'html')
