@@ -6,9 +6,7 @@
 Add your content here.
 
 
-= Details =
-
-Add your content here.  Format your content with:
-  * Text in *bold* or _italic_
-  * Headings, paragraphs, and lists
-  * Automatic links to other wiki pages
+= To Do =
+  * how does the garbage collection work / what objects are known to the garbage collector
+  * how static/cached objects are handled such as True, False, Integers
+  * how Pympler works and what Pympler can and cannot do
