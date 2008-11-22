@@ -1,0 +1,28 @@
+#summary Documents testing strategy for release preparation.
+
+= Introduction =
+
+Before a release is published, the distributed package should be tested against all supported platforms and Python versions. When all issues scheduled for the release-related milestone are closed, the release is frozen. The source archive is deployed on the target platforms and pre- and post-installation tests are run. The test results are recorded in the Test Matrix below. If some tests fail, the Test Matrix is cleared once all issues are resolved and all tests are rerun.
+
+== Release Freeze ==
+
+TODO
+
+== How to run the test ==
+
+  # unpack the distribution
+  # run setup.py with pre- and post-installation testing (TODO: how exactly)
+    * Test fails
+      * Issue should be opened in the bug tracker
+      * Issue number is recorded in the test matrix
+    * All tests pass
+      * Write 'OK' to the associated cell in the test matrix
+
+= Test Matrix =
+
+|| *pympler 0.1* revXXXX || *Python 2.4* || *Python 2.5* || *Python 2.6* ||
+|| Ubuntu 8.10 32bit ||  ||  ||  ||
+|| Ubuntu 8.10 64bit ||  ||  ||  ||
+|| Debian 64bit ||  ||  ||  ||
+|| MacOSX ||  ||  ||  ||
+|| Windows XP 32bit ||  ||  ||  ||
