@@ -4,23 +4,51 @@
 
 Before a release is published, the distributed package should be tested against all supported platforms and Python versions. When all issues scheduled for the release-related milestone are closed, the release is frozen. The source archive is deployed on the target platforms and pre- and post-installation tests are run. The test results are recorded in the Test Matrix below. If some tests fail, the Test Matrix is cleared once all issues are resolved and all tests are rerun.
 
-== Release Freeze ==
+== Release Branching ==
 
-TODO
+The release branching strategy follows the Subversion [http://svnbook.red-bean.com/en/1.5/svn-book.html#svn.branchmerge.commonpatterns.release Release Branches] guideline.
+
+Once all release-critical issues are closed, a svn branch is created to prepare the new release:
+
+{{{
+svn copy https://pympler.googlecode.com/svn/trunk https://pympler.googlecode.com/svn/branches/0.1 -m "Creating release branch."
+}}}
+
+The branch allows to keep on working on the trunk while the release is being tested. To ensure that all tests are run against the same revision a release-candidate tag are created from the branch:
+
+{{{
+svn copy https://pympler.googlecode.com/svn/branches/0.1 https://pympler.googlecode.com/svn/tags/0.1rc1 -m "Creating release-candidate."
+}}}
+
+If problems/bugs are found during release-testing, it is fixed in the trunk and then selectively merged into the release branch. Once all problems were fixed, another release candidate is created and tested.
+
+If all tests pass, the release candidate is converted to the actual release. 
+
+{{{
+svn move https://pympler.googlecode.com/svn/tags/0.1rc1 https://pympler.googlecode.com/svn/tags/0.1 -m "Relabel release-candidate as release."
+}}}
 
 == How to run the test ==
 
-  # unpack the distribution
-  # run setup.py with pre- and post-installation testing (TODO: how exactly)
+  # checkout the release-candidate tag
+  # run setup.py with pre- and post-installation testing
     * Test fails
       * Issue should be opened in the bug tracker
       * Issue number is recorded in the test matrix
     * All tests pass
       * Write 'OK' to the associated cell in the test matrix
 
+{{{
+svn checkout http://pympler.googlecode.com/svn/tags/0.1rc1 pympler
+cd pympler
+python setup.py try
+python setup.py install
+python setup.py test
+}}}
+
 = Test Matrix =
 
-|| *pympler 0.1* revXXXX || *Python 2.4* || *Python 2.5* || *Python 2.6* ||
+|| *pympler 0.1rc1* || *Python 2.4* || *Python 2.5* || *Python 2.6* ||
 || Ubuntu 8.10 32bit ||  ||  ||  ||
 || Ubuntu 8.10 64bit ||  ||  ||  ||
 || Debian 64bit ||  ||  ||  ||
