@@ -69,5 +69,5 @@ python2.6 setup.py test
 || Ubuntu 8.10 32bit || PASSED || PASSED || PASSED ||
 || Ubuntu 8.10 64bit ||  ||  ||  ||
 || Debian 64bit || PASSED || PASSED || PASSED ||
-|| MacOS X  10.4.11 (Intel) 32bit ||  ||  ||  ||
+|| MacOS X  10.4.11 (Intel) 32bit ||  PASSED || PASSED  ||  ||
 || Windows XP 32bit ||  ||  ||  ||
