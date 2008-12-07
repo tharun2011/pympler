@@ -41,7 +41,7 @@ svn move https://pympler.googlecode.com/svn/tags/0.1rc1 https://pympler.googleco
 {{{
 svn checkout http://pympler.googlecode.com/svn/tags/0.1rc1 pympler
 cd pympler
-python setup.py sdist
+python run.py --dist --html --keep
 }}}
 
 Deploy the dist archive at the test systems, unpack, run tests, and install.
