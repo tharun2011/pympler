@@ -36,7 +36,7 @@ svn move https://pympler.googlecode.com/svn/tags/0.1rc1 https://pympler.googleco
       * Issue should be opened in the bug tracker
       * Issue number is recorded in the test matrix
     * All tests pass
-      * Write 'OK' to the associated cell in the test matrix
+      * Write 'PASSED' to the associated cell in the test matrix
 
 {{{
 svn checkout http://pympler.googlecode.com/svn/tags/0.1rc1 pympler
@@ -73,7 +73,7 @@ cd ..
 
 || *pympler 0.1rc1* || *Python 2.4* || *Python 2.5* || *Python 2.6* ||
 || Ubuntu 8.10 32bit || PASSED || PASSED || PASSED ||
-|| Ubuntu 8.10 64bit ||  ||  ||  ||
+|| Ubuntu 8.10 64bit || PASSED || PASSED || PASSED ||
 || Debian 64bit || PASSED || PASSED || PASSED ||
 || MacOS X  10.4.11 (Intel) 32bit ||  PASSED || PASSED  || PASSED ||
 || Windows XP 32bit ||  ||  PASSED  || PASSED ||
