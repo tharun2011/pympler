@@ -80,4 +80,4 @@ cd ..
 || Debian 64bit || PASSED || PASSED || PASSED ||
 || MacOS X  10.4.11 (Intel) 32bit ||  PASSED || PASSED  || PASSED ||
 || Windows XP 32bit || PASSED* ||  PASSED  || PASSED ||
-|| Solaris  10 (x86 Opteron) 32bit ||  || PASSED  || PASSED ||
+|| Solaris  10 (x86 Opteron) 32bit ||  PASSED  || PASSED  || PASSED ||
