@@ -79,4 +79,4 @@ cd ..
 || Ubuntu 8.10 64bit || PASSED || PASSED || PASSED ||
 || Debian 64bit || PASSED || PASSED || PASSED ||
 || MacOS X  10.4.11 (Intel) 32bit ||  PASSED || PASSED  || PASSED ||
-|| Windows XP 32bit ||  ||  PASSED  || PASSED ||
+|| Windows XP 32bit || PASSED ||  PASSED  || PASSED ||
