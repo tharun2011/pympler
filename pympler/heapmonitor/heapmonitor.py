@@ -42,14 +42,13 @@ import gc
 import pympler.asizeof as asizeof
 import pympler.process
 
+from pympler.util.stringutils import trunc, pp
+
 __all__ = ['TrackedObject', 'track_change', 'track_object', 'track_class',
            'detach_class', 'detach_all', 'detach_all_classes', 'clear',
            'start_periodic_snapshots', 'stop_periodic_snapshots',
            'create_snapshot', 'MemStats', 'HtmlStats',
            'dump_stats', 'print_stats', 'print_snapshots',
-           'start_debug_garbage', 'end_debug_garbage', 'print_garbage_stats',
-           'visualize_ref_cycles', 'find_garbage', 'get_edges',
-           'eliminate_leafs',
            'tracked_index', 'tracked_objects', 'footprint']
 
 # Dictionaries of TrackedObject objects associated with the actual objects that
@@ -156,32 +155,6 @@ def _tracker(_observer_, _self_, *args, **kwds):
         keep=_observer_.keep, trace=_observer_.trace)
     _observer_.init(_self_, *args, **kwds)
 
-def _trunc(s, max, left=0):
-    """
-    Convert 's' to string, eliminate newlines and truncate the string to 'max'
-    characters. If there are more characters in the string add '...' to the
-    string. With 'left=1', the string can be truncated at the beginning.
-    """
-    s = str(s)
-    s = s.replace('\n', '|')
-    if len(s) > max:
-        if left:
-            return '...'+s[len(s)-max+3:]
-        else:
-            return s[:(max-3)]+'...'
-    else:
-        return s
-
-def _pp(i):
-    degree = 0
-    pattern = "%4d     %s"
-    while i > 1024:
-        pattern = "%7.2f %s"
-        i = i / 1024.0
-        degree += 1
-    scales = ['B', 'KB', 'MB', 'GB', 'TB', 'EB']
-    return pattern % (i, scales[degree])
-
 def _get_timestamp(t):
     """
     Get a friendly timestamp represented as a string.
@@ -258,8 +231,8 @@ class TrackedObject(object):
         lrefs.reverse()
         for r in lrefs:
             if r.size > minsize and (r.size*100.0/total) > minpct:
-                fobj.write('%-50s %-14s %3d%% [%d]\n' % (_trunc(prefix+str(r.name),50),
-                    _pp(r.size),int(r.size*100.0/total), level))
+                fobj.write('%-50s %-14s %3d%% [%d]\n' % (trunc(prefix+str(r.name),50),
+                    pp(r.size),int(r.size*100.0/total), level))
                 self._print_refs(fobj, r.refs, total, prefix=prefix+'  ', level=level+1)
 
     def _save_trace(self):
@@ -284,17 +257,17 @@ class TrackedObject(object):
         if full:
             if self.death:
                 fobj.write('%-32s ( free )   %-35s\n' % (
-                    _trunc(self.name, 32, left=1), _trunc(self.repr, 35)))
+                    trunc(self.name, 32, left=1), trunc(self.repr, 35)))
             else:
                 fobj.write('%-32s 0x%08x %-35s\n' % (
-                    _trunc(self.name, 32, left=1), self.id, _trunc(self.repr, 35)))
+                    trunc(self.name, 32, left=1), self.id, trunc(self.repr, 35)))
             try:
                 for line in self.trace:
                     fobj.write(line)
             except AttributeError:
                 pass
             for (ts, size) in self.footprint:
-                fobj.write('  %-30s %s\n' % (_get_timestamp(ts), _pp(size.size)))
+                fobj.write('  %-30s %s\n' % (_get_timestamp(ts), pp(size.size)))
                 self._print_refs(fobj, size.refs, size.size)                    
             if self.death is not None:
                 fobj.write('  %-30s finalize\n' % _get_timestamp(ts))
@@ -303,9 +276,9 @@ class TrackedObject(object):
             # Unused ATM: Maybe drop this type of reporting
             size = self.get_max_size()
             if self.repr:
-                fobj.write('%-64s %-14s\n' % (_trunc(self.repr, 64), _pp(size)))
+                fobj.write('%-64s %-14s\n' % (trunc(self.repr, 64), pp(size)))
             else:
-                fobj.write('%-64s %-14s\n' % (_trunc(self.name, 64), _pp(size)))       
+                fobj.write('%-64s %-14s\n' % (trunc(self.name, 64), pp(size)))       
         
 
     def track_size(self, ts, sizer):
@@ -319,7 +292,7 @@ class TrackedObject(object):
             (ts, sizer.asized(obj, detail=self._resolution_level)) 
         )
         if obj is not None:
-            self.repr = _trunc(str(obj), 128)
+            self.repr = trunc(str(obj), 128)
 
     def get_max_size(self):
         """
@@ -808,7 +781,7 @@ class MemStats:
         for fp in self.footprint:
             self.annotate_snapshot(fp)
             fobj.write('%-35s %11s %12s %12s %5s\n' % \
-                (_trunc(fp.desc, 35), 'active', _pp(fp.asizeof_total), 
+                (trunc(fp.desc, 35), 'active', pp(fp.asizeof_total), 
                  'average', 'pct'))
             for classname in classlist:
                 try:
@@ -821,7 +794,7 @@ class MemStats:
                 else:
                     total, avg, pct, active = info['sum'], info['avg'], info['pct'], info['active']
                     fobj.write('  %-33s %11d %12s %12s %4d%%\n' % \
-                        (_trunc(classname, 33), active, _pp(total), _pp(avg), pct))
+                        (trunc(classname, 33), active, pp(total), pp(avg), pct))
         fobj.write('-'*79+'\n')
 
 class HtmlStats(MemStats):
@@ -877,8 +850,8 @@ class HtmlStats(MemStats):
             fobj.write('<table>\n')
         for r in lrefs:
             if r.size > minsize and (r.size*100.0/total) > minpct:
-                data = {'level': level, 'name': _trunc(str(r.name),128),
-                    'size': _pp(r.size), 'pct': r.size*100.0/total }
+                data = {'level': level, 'name': trunc(str(r.name),128),
+                    'size': pp(r.size), 'pct': r.size*100.0/total }
                 fobj.write(self.refrow % data)
                 self._print_refs(fobj, r.refs, total, level=level+1)
         if level == 1:
@@ -901,9 +874,9 @@ class HtmlStats(MemStats):
         sizes = [to.get_max_size() for to in self.tracked_index[classname]]
         total = reduce( lambda s,x: s+x, sizes )
         data = {'cnt': len(self.tracked_index[classname]), 'cls': classname}
-        data['avg'] = _pp(total / len(sizes))
-        data['max'] = _pp(max(sizes))
-        data['min'] = _pp(min(sizes))
+        data['avg'] = pp(total / len(sizes))
+        data['max'] = pp(max(sizes))
+        data['min'] = pp(min(sizes))
         fobj.write(self.class_summary % data)
 
         fobj.write(self.charts[classname])
@@ -921,9 +894,9 @@ class HtmlStats(MemStats):
             for (ts, size) in to.footprint:
                 fobj.write("<tr><td>%s</td>" % _get_timestamp(ts))
                 if not size.refs:
-                    fobj.write("<td>%s</td></tr>\n" % _pp(size.size))
+                    fobj.write("<td>%s</td></tr>\n" % pp(size.size))
                 else:
-                    fobj.write("<td>%s" % _pp(size.size))
+                    fobj.write("<td>%s" % pp(size.size))
                     self._print_refs(fobj, size.refs, size.size)
                     fobj.write("</td></tr>\n")
             fobj.write("</table>\n")
@@ -976,10 +949,10 @@ class HtmlStats(MemStats):
                 _get_timestamp(fp.timestamp)))
 
             data = {}
-            data['sys']      = _pp(fp.system_total.vsz)
-            data['tracked']  = _pp(fp.tracked_total)
-            data['asizeof']  = _pp(fp.asizeof_total)
-            data['overhead'] = _pp(getattr(fp, 'overhead', 0))
+            data['sys']      = pp(fp.system_total.vsz)
+            data['tracked']  = pp(fp.tracked_total)
+            data['asizeof']  = pp(fp.asizeof_total)
+            data['overhead'] = pp(getattr(fp, 'overhead', 0))
 
             fobj.write(self.snapshot_summary % data)
 
@@ -988,8 +961,8 @@ class HtmlStats(MemStats):
                 for classname in classlist:
                     data = fp.classes[classname].copy()
                     data['cls'] = "<a href='%s'>%s</a>" % (self.links[classname], classname)
-                    data['sum'] = _pp(data['sum'])
-                    data['avg'] = _pp(data['avg'])
+                    data['sum'] = pp(data['sum'])
+                    data['avg'] = pp(data['avg'])
                     fobj.write(self.snapshot_cls % data)
             fobj.write('</table>')
             fobj.write('</td><td>\n')
@@ -1197,181 +1170,6 @@ def print_snapshots(fobj=sys.stdout):
         if label == '':
             label = _get_timestamp(fp.timestamp)
         sample = "%-32s %15s (%11s) %15s\n" % \
-            (label, _pp(fp.system_total.vsz), _pp(fp.asizeof_total), 
-            _pp(fp.tracked_total))
+            (label, pp(fp.system_total.vsz), pp(fp.asizeof_total), 
+            pp(fp.tracked_total))
         fobj.write(sample)
-
-
-#
-# Garbage collection.
-# Use the data exposed by the garbage collector to present the data in a
-# meaningful and user-friendly way.
-#
-
-class Garbage:
-    pass
-
-def _log_garbage(garbage, fobj=sys.stdout):
-    """
-    Log garbage to console.
-    """
-    sz = 0
-    garbage.sort(key=lambda x: x.size)
-    garbage.reverse()
-    fobj.write('%-10s %8s %-12s %-46s\n' % ('id', 'size', 'type', 'representation'))
-    for g in garbage:
-        sz += g.size
-        fobj.write('0x%08x %8d %-12s %-46s\n' % (g.id, g.size, _trunc(g.type, 12),
-            _trunc(g.str, 46)))
-
-def _visualize_gc_graphviz(garbage, metagarbage, edges, fobj):
-    """
-    Emit a graph representing the connections between the objects collected by
-    the garbage collector. The text representation can be transformed to a graph
-    with graphviz.
-    The file has to permit write access and is closed at the end of the
-    function.
-    """
-    header = '// Process this file with graphviz\n'
-    fobj.write(header)
-    fobj.write('digraph G {\n')
-    for n, g in map(None, garbage, metagarbage):
-        label = _trunc(g.str, 48).replace('"', "'")
-        extra = ''
-        if g.type == 'instancemethod':
-            extra = ', color=red'
-        elif g.type == 'frame':
-            extra = ', color=orange'
-        fobj.write('    "X%08x" [ label = "%s\\n%s" %s ];\n' % \
-            (id(n), label, g.type, extra))
-    for (i, j, l) in edges:
-        fobj.write('    X%08x -> X%08x [label="%s"];\n' % (i, j, l))
-
-    fobj.write('}\n')
-    fobj.close()
-
-def eliminate_leafs(graph, get_referents=gc.get_referents):
-    """
-    Eliminate leaf objects (not directly part of cycles).
-    """
-    result = []
-    idset = set([id(x) for x in graph])
-    for n in graph:
-        refset = set([id(x) for x in get_referents(n)])
-        if refset.intersection(idset):
-            result.append(n)
-    return result
-
-def get_edges(graph, get_referents=gc.get_referents):
-    """
-    Compute the edges for the reference graph.
-    The function returns a set of tuples (id(a), id(b), ref) if a
-    references b with the referent 'ref'.
-    """
-    idset = set([id(x) for x in graph])
-    edges = set([])
-    for n in graph:
-        refset = set([id(x) for x in get_referents(n)])
-        for ref in refset.intersection(idset):
-            label = ''
-            for (k, v) in getmembers(n):
-                if id(v) == ref:
-                    label = k
-                    break
-            edges.add((id(n), ref, label))
-    return edges
-
-def find_garbage(sizer=None, graphfile=None, prune=1):
-    """
-    Let the garbage collector identify ref cycles.
-    First, the garbage collector runs and saves the garbage into gc.garbage. The
-    leafs of the reference graph will be pruned to only include objects directly
-    involved in actual cycles. The remaining garbage elements will be sized
-    (which will include the pruned leaf sizes) and annotated. If a graphfile is
-    passed and garbage was detected, the garbage will be visualized in graphviz
-    format.
-    The total number of garbage and the annotated cycle elements are returned.
-    """
-    if not sizer:
-        sizer = asizeof.Asizer()
-
-    gc.set_debug(gc.DEBUG_SAVEALL)
-    gc.collect()
-
-    total = len(gc.garbage)
-    cnt = 0
-    cycles = gc.garbage[:]
-
-    if prune:
-        while cnt != len(cycles):
-            cnt = len(cycles)
-            cycles = eliminate_leafs(cycles)
-
-    edges = get_edges(cycles)
-
-    garbage = []
-    for obj, sz in map( lambda x, y: (x, y), cycles, sizer.asizesof(*cycles)):
-        g = Garbage()
-        g.size = sz
-        g.id = id(obj)
-        try:
-            g.type = obj.__class__.__name__
-        except (AttributeError, ReferenceError):
-            g.type = type(obj)
-        try:
-            g.str = _trunc(str(obj), 128)
-        except ReferenceError:
-            g.str = ''
-        garbage.append(g)
-    
-    if graphfile and len(garbage) > 0:
-        _visualize_gc_graphviz(cycles, garbage, edges, graphfile)
-
-    return total, garbage
-
-
-def start_debug_garbage():
-    """
-    Turn off garbage collector to analyze *collectable* reference cycles.
-    """
-    gc.collect()
-    gc.disable()
-
-
-def end_debug_garbage():
-    """
-    Turn garbage collection on and disable debug output.
-    """
-    gc.set_debug(0)
-    gc.enable()
-
-
-def print_garbage_stats(fobj=sys.stdout):
-    """
-    Print statistics related to garbage/leaks.
-    This function collects the reported garbage. Therefore, subsequent
-    invocations of `print_garbage_stats` will not report the same objects again.
-    """
-    sizer = asizeof.Asizer()
-    total, garbage = find_garbage(sizer)
-    sz = sizer.total
-
-    cnt = len(garbage)
-    if cnt:
-        _log_garbage(garbage, fobj)
-    fobj.write('Garbage: %8d collected objects (%6d in cycles): %12s\n' % (total, cnt, _pp(sz)))
-
-
-def visualize_ref_cycles(fname):
-    """
-    Print reference cycles of collectable garbage to a file which can be
-    processed by Graphviz.
-    This function collects the reported garbage. Therefore, subsequent
-    invocations of `print_garbage_stats` will not report the same objects again.
-    """
-    fobj = open(fname, 'w')
-    sizer = asizeof.Asizer()
-    total, garbage = find_garbage(sizer, fobj)
-    fobj.close()
-
-    
