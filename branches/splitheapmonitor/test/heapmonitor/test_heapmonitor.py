@@ -1,28 +1,3 @@
-#
-# __COPYRIGHT__
-#
-# Permission is hereby granted, free of charge, to any person obtaining
-# a copy of this software and associated documentation files (the
-# "Software"), to deal in the Software without restriction, including
-# without limitation the rights to use, copy, modify, merge, publish,
-# distribute, sublicense, and/or sell copies of the Software, and to
-# permit persons to whom the Software is furnished to do so, subject to
-# the following conditions:
-#
-# The above copyright notice and this permission notice shall be included
-# in all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
-# KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
-# WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-# LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-#
-
-__revision__ = "__FILE__ __REVISION__ __DATE__ __DEVELOPER__"
-
 import unittest
 import gc
 import re
@@ -404,107 +379,11 @@ class LogTestCase(unittest.TestCase):
         f3.close()
 
 
-class GarbageTestCase(unittest.TestCase):
-    def setUp(self):
-        gc.collect()
-        gc.disable()
-        gc.set_debug(gc.DEBUG_SAVEALL)
-
-    def tearDown(self):
-        gc.set_debug(0)
-        gc.enable()
-
-    def test_findgarbage(self):
-        """Test garbage annotation.
-        """
-        foo = Foo()
-        bar = Bar()
-
-        idfoo = id(foo)
-        idbar = id(bar)
-
-        foo.next = bar
-        bar.prev = foo
-
-        del foo
-        del bar
-
-        cnt, garbage = find_garbage()
-
-        assert cnt == len(gc.garbage)
-        assert cnt >= 2
-        
-        gfoo = [x for x in garbage if x.id == idfoo]
-        assert len(gfoo) == 1
-        gfoo = gfoo[0]
-        assert gfoo.type == 'Foo'
-        assert gfoo.size > 0
-        assert gfoo.str != ''
-
-        gbar = [x for x in garbage if x.id == idbar]
-        assert len(gbar) == 1
-        gbar = gbar[0]
-        assert gbar.type == 'Bar'
-        assert gbar.size > 0
-        assert gbar.str != ''
-
-    def test_noprune(self):
-        """Test pruning of reference graph.
-        """
-        foo = Foo()
-        bar = Bar()
-
-        foo.parent = foo
-        foo.leaf = bar
-
-        idb = id(bar)
-
-        del foo
-        del bar
-
-        cnt1, garbage1 = find_garbage(prune=0)
-        cnt2, garbage2 = find_garbage(prune=1)
-
-        assert cnt1 == cnt2
-        assert len(garbage1) > len(garbage2)
-        
-        gbar = [x for x in garbage1 if x.id == idb]
-        assert len(gbar) == 1
-        gbar = [x for x in garbage2 if x.id == idb]
-        assert len(gbar) == 0
-
-    def test_edges(self):
-        """Test referent identification.
-        """
-        foo = Foo()
-        bar = Bar()
-
-        idfoo = id(foo)
-        idfd = id(foo.__dict__)
-        idbar = id(bar)
-        idbd = id(bar.__dict__)
-
-        foo.next = bar
-        bar.prev = foo
-
-        del foo
-        del bar
-
-        gc.collect()
-        e = get_edges(gc.garbage[:])
-
-        # TODO: insert labels when implemented
-        assert (idfoo, idfd, '') in e or (idfoo, idfd, '__dict__') in e
-        assert (idfd, idbar, '') in e
-        assert (idbar, idbd, '') in e or (idbar, idbd, '__dict__') in e
-        assert (idbd, idfoo, '') in e        
-
 if __name__ == "__main__":
     suite = unittest.TestSuite()
     tclasses = [ TrackObjectTestCase,
                  TrackClassTestCase,
                  SnapshotTestCase,
-                 GarbageTestCase,
                  LogTestCase
                ]
     for tclass in tclasses:
