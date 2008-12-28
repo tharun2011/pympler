@@ -4,7 +4,7 @@ This module exposes utilities to illustrate objects and their references as
 installed.
 """
 
-from pympler.asizeof import Asizer
+from pympler.asizeof import Asizer, _inst_refs
 from pympler.util.stringutils import trunc, pp
 from gc import get_referents
 from inspect import getmembers
@@ -73,7 +73,7 @@ class GraphBrowser(object):
         cnt = 0
         while cnt != len(cycles):
             cnt = len(cycles)
-            cycles = self.eliminate_leafs(cycles)
+            cycles = self._eliminate_leafs(cycles)
         self.objects = cycles
         return len(self.objects)
 
@@ -90,10 +90,25 @@ class GraphBrowser(object):
             refset = set([id(x) for x in get_referents(n)])
             for ref in refset.intersection(idset):
                 label = ''
-                for (k, v) in getmembers(n):
+                members = None
+                if isinstance(n, dict):
+                    members = n.items()
+                if not members:
+                    members = getmembers(n)
+                for (k, v) in members:
                     if id(v) == ref:
                         label = k
                         break
+                if not label:
+                    # Try to use asizeof's referent generator to identify
+                    # referents of old-style classes.
+                    try:
+                        if type(n).__name__ == 'instance':
+                            for member in _inst_refs(n, 1):
+                                if id(member.ref) == ref:
+                                    label = member.name
+                    except AttributeError:
+                        pass
                 self.edges.add((id(n), ref, label))
 
 

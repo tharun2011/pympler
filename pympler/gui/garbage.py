@@ -27,12 +27,16 @@ class GarbageBrowser(GraphBrowser):
     >>> gb.render('garbage.eps')
     True
     """
-    def __init__(self, reduce=False):
+    def __init__(self, reduce=False, collectable=True):
         """
         Initialize the GarbageBrowser with the objects identified by the garbage
-        collector.
+        collector. If `collectable` is true, every reference cycle is recorded.
+        Otherwise only uncollectable objects are reported.
         """
-        gc.set_debug(gc.DEBUG_SAVEALL)
+        if collectable:
+            gc.set_debug(gc.DEBUG_SAVEALL)
+        else:
+            gc.set_debug(0)
         gc.collect()
 
         GraphBrowser.__init__(self, gc.garbage, reduce)
