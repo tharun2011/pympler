@@ -74,8 +74,6 @@ To track the size of an individual object::
     obj = MyObject()
     heapmonitor.track_object(obj)
 
-.. autofunction:: track_object
-
 Class Tracking
 ~~~~~~~~~~~~~~
 
@@ -86,8 +84,6 @@ instances of a class can automatically be tracked with *track_class*::
 
 All instances of `MyClass` (or a class that inherits from `MyClass`) created
 hereafter are tracked.
-
-.. autofunction:: track_class
 
 Tracked Object Snapshot
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -104,16 +100,12 @@ tracked objects::
 With this information, the distribution of the allocated memory can be
 apportioned to tracked classes and instances.
 
-.. autofunction:: create_snapshot
-
 Print Statistics
 ~~~~~~~~~~~~~~~~
 
 The gathered data can be investigated with `print_stats`. This prints all
 available data. To filter and limit the output the more powerful "Off-line
 analysis" API can be used instead.
-
-.. autofunction:: print_stats
 
 Advanced Functionality
 ----------------------
@@ -179,10 +171,6 @@ associated with any tracked object. ::
     of individual objects might be inconsistent when memory is allocated or freed
     while the snapshot is being taken.
 
-.. autofunction:: start_periodic_snapshots
-
-.. autofunction:: stop_periodic_snapshots
-
 Off-line Analysis
 ~~~~~~~~~~~~~~~~~
 
@@ -207,9 +195,6 @@ objects to the standard output::
     stats.load('heap.dat')
     stats.sort_stats('size').print_stats(limit=10, filter='Node')
 
-.. autoclass:: MemStats
-   :members: load_stats, sort_stats, print_stats, dump_stats, reverse_order
-
 HTML Statistics
 ~~~~~~~~~~~~~~~
 
@@ -225,59 +210,6 @@ However, you can also reprocess a previously generated dump::
 
     stats = HtmlStats('heap-profile.dat')
     stats.create_html('heap-profile.html')
-
-.. autoclass:: HtmlStats
-   :members: create_html
-
-Tracking Garbage
-----------------
-
-Garbage occurs if objects refer too each other in a circular fashion. Such
-reference cycles cannot be freed automatically and must be collected by the
-garbage collector. While it is sometimes hard to avoid creating reference
-cycles, preventing such cycles saves garbage collection time and limits the
-lifetime of objects. Moreover, some objects cannot be collected by the garbage
-collector.
-
-The Heapmonitor provides functions to analyze reference cycles of collectable
-objects. When the garbage collector is turned off, the garbage can be kept for
-debugging purposes::
-
-    from pympler import heapmonitor
-
-    heapmonitor.start_debug_garbage()
-
-    l = []
-    l.append(l) # produce cycle
-
-    heapmonitor.print_garbage_stats()
-    heapmonitor.end_debug_garbage()
-
-
-Reference cycles can be visualized with `graphviz <http://www.graphviz.org>`_.
-A graphviz input file is generated when `visualize_ref_cycles` is invoked::
-
-    from pympler import heapmonitor
-
-    heapmonitor.start_debug_garbage()
-
-    l = []
-    l.append(l) # produce cycle
-
-    heapmonitor.visualize_ref_cycles('leakgraph.txt')
-    heapmonitor.end_debug_garbage()
-
-
-On Linux, the graph file can be turned into a PDF with the following commands::
-
-    dot -o leakgraph.dot leakgraph.txt
-    dot leakgraph.dot -Tps -o leakgraph.eps
-    epstopdf leakgraph.eps
-
-.. autofunction:: start_debug_garbage
-.. autofunction:: end_debug_garbage
-.. autofunction:: print_garbage_stats
-.. autofunction:: visualize_ref_cycles
 
 Limitations and Corner Cases
 ----------------------------
