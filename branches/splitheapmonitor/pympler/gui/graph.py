@@ -25,6 +25,7 @@ class GraphBrowser(object):
     The GraphBrowser illustrates the references between a collection of objects
     by rendering a directed graph. That requires that 'graphviz' is installed.
 
+    >>> from pympler.gui.graph import GraphBrowser
     >>> a = 42
     >>> b = 'spam'
     >>> c = {a: b}
