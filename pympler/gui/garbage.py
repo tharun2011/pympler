@@ -18,8 +18,8 @@ class GarbageBrowser(GraphBrowser):
     It is recommended to disable the garbage collector when using the
     GarbageBrowser.
 
-    >>> import gc
-    >>> gc.disable()
+    >>> from pympler.gui.garbage import GarbageBrowser, start_debug_garbage
+    >>> start_debug_garbage()
     >>> l = []
     >>> l.append(l)
     >>> del l
