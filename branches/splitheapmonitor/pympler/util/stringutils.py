@@ -1,4 +1,3 @@
-
 def trunc(s, max, left=0):
     """
     Convert 's' to string, eliminate newlines and truncate the string to 'max'
@@ -27,4 +26,13 @@ def pp(i, base=1024):
         degree += 1
     scales = ['B', 'KB', 'MB', 'GB', 'TB', 'EB']
     return pattern % (i, scales[degree])
+
+def pp_timestamp(t):
+    """
+    Get a friendly timestamp represented as a string.
+    """
+    if t is None: 
+        return ''
+    h, m, s = int(t / 3600), int(t / 60 % 60), t % 60
+    return "%02d:%02d:%05.2f" % (h, m, s)
 
