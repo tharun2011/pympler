@@ -1,13 +1,13 @@
-.. _heapmonitor:
+.. _classtracker:
 
-=========================
-Heapmonitor Documentation
-=========================
+===========================
+Class Tracker Documentation
+===========================
 
 Introduction
 ------------
 
-.. automodule:: pympler.heapmonitor
+.. automodule:: pympler.tracker.classes
 
 Usage
 -----
@@ -35,19 +35,21 @@ Let's start with a simple example. Suppose you have this module::
     >>> factory = create_factory()
     >>> populate_factory(factory)
 
-The basic tools of the Heapmonitor are tracking objects or classes, taking
+The basic tools of the Class Tracker are tracking objects or classes, taking
 snapshots, and printing or dumping statistics. The first step is to decide what
 to track. Then spots of interest for snapshot creation have to be identified.
 Finally, the gathered data can be printed or saved::
     
     >>> factory = create_factory()
-    >>> from pympler import heapmonitor
-    >>> heapmonitor.track_object(factory)
-    >>> heapmonitor.track_class(Employee)
-    >>> heapmonitor.create_snapshot()
+    >>> from pympler.tracker.classes import ClassTracker
+    >>> tracker = ClassTracker()
+    >>> tracker.track_object(factory)
+    >>> tracker.track_class(Employee)
+    >>> tracker.create_snapshot()
     >>> populate_factory(factory)
-    >>> heapmonitor.create_snapshot()
-    >>> heapmonitor.print_stats(detailed=0)
+    >>> tracker.create_snapshot()
+    >>> from pympler.tracker.mstats import ConsoleStats
+    >>> ConsoleStats(tracker=tracker).print_summary()
     ---- SUMMARY ------------------------------------------------------------------
                                              active      1.22 MB      average   pct
       Factory                                     1    344     B    344     B    0%
@@ -70,9 +72,10 @@ size of the object is sampled when taking a snapshot.
 
 To track the size of an individual object::
     
-    from pympler import heapmonitor
+    from pympler.tracker.classes import ClassTracker
+    tracker = ClassTracker()
     obj = MyObject()
-    heapmonitor.track_object(obj)
+    tracker.track_object(obj)
 
 Class Tracking
 ~~~~~~~~~~~~~~
@@ -80,7 +83,7 @@ Class Tracking
 Most of the time, it's cumbersome to manually track individual instances. All
 instances of a class can automatically be tracked with *track_class*::
 
-    heapmonitor.track_class(MyClass)
+    tracker.track_class(MyClass)
 
 All instances of `MyClass` (or a class that inherits from `MyClass`) created
 hereafter are tracked.
@@ -89,13 +92,13 @@ Tracked Object Snapshot
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 Tracking alone will not reveal the size of an object. The idea of the
-Heapmonitor is to sample the sizes of all tracked objects at configurable
+Class Tracker is to sample the sizes of all tracked objects at configurable
 instants in time. The `create_snapshot` function computes the size of all
 tracked objects::
 
-    heapmonitor.create_snapshot('Before juggling with tracked objects')
+    tracker.create_snapshot('Before juggling with tracked objects')
     ...
-    heapmonitor.create_snapshot('Juggling aftermath')
+    tracker.create_snapshot('Juggling aftermath')
 
 With this information, the distribution of the allocated memory can be
 apportioned to tracked classes and instances.
@@ -120,18 +123,18 @@ object will be sized. Level 2 also include the referents of the direct
 referents, and so forth. Note that the member variables of an instance are
 typically stored in a dictionary and are therefore second order referents. ::
 
-    heapmonitor.track_object(obj, resolution_level=2)
+    tracker.track_object(obj, resolution_level=2)
 
 The resolution level can be changed if the object is already tracked::
 
-    heapmonitor.track_change(obj, resolution_level=2)
+    tracker.track_change(obj, resolution_level=2)
 
 The new setting will become effective for the next snapshot. This can help to
 raise the level of detail for a specific instance of a tracked class without
 logging all the class' instances with a high verbosity level. Nevertheless, the
 resolution level can also be set for all instances of a class::
 
-    heapmonitor.track_class(MyObject, resolution_level=1)
+    tracker.track_class(MyObject, resolution_level=1)
 
 .. warning::
 
@@ -145,25 +148,25 @@ Instantiation traces
 ~~~~~~~~~~~~~~~~~~~~
 
 Sometimes it is not trivial to observe where an object was instantiated. The
-Heapmonitor can remember the instantiation stack trace for later evaluation. ::
+Class Tracker can record the instantiation stack trace for later evaluation. ::
 
-    heapmonitor.track_class(MyObject, trace=1)
+    tracker.track_class(MyObject, trace=1)
 
 This only works with tracked classes, and **not** with individual objects.
 
 Background Monitoring
 ~~~~~~~~~~~~~~~~~~~~~
 
-The Heapmonitor can be configured to take periodic snapshots automatically. The
+The Class Tracker can be configured to take periodic snapshots automatically. The
 following example will take 10 snapshots a second (approximately) until the
 program has exited or the periodic snapshots are stopped with
 `stop_periodic_snapshots`. Background monitoring also works if no object is
-tracked. In this mode, the Heapmonitor will only record the total virtual
+tracked. In this mode, the Class Tracker will only record the total virtual
 memory associated with the program. This can be useful in combination with
 background monitoring to detect memory usage which is transient or not
 associated with any tracked object. ::
 
-    heapmonitor.start_periodic_snapshots(interval=0.1)
+    tracker.start_periodic_snapshots(interval=0.1)
 
 .. warning::
 
@@ -174,13 +177,14 @@ associated with any tracked object. ::
 Off-line Analysis
 ~~~~~~~~~~~~~~~~~
 
-The more data is gathered by the Heapmonitor the more noise is produced on the
-console. The acquired Heapmonitor log data can also be saved to a file for
+The more data is gathered by the Class Tracker the more noise is produced on the
+console. The acquired Class Tracker log data can also be saved to a file for
 off-line analysis::
 
-    heapmonitor.dump_stats('heap-profile.dat')
+    from pympler.tracker.mstats import MemStats
+    MemStats(tracker=tracker).dump_stats('profile.dat')
 
-The `MemStats` class of the Heapmonitor provides means to evaluate the collected
+The `MemStats` class of the Class Tracker provides means to evaluate the collected
 data. The API is inspired by the `Stats class
 <http://docs.python.org/lib/profile-stats.html>`_ of the Python profiler. It is
 possible to sort the data based on user preferences, filter by class and limit
@@ -189,27 +193,28 @@ the output noise to a manageable magnitude.
 The following example reads the dumped data and prints the ten largest Node
 objects to the standard output::
 
-    from pympler.heapmonitor import MemStats
+    from pympler.tracker.mstats import ConsoleStats
 
-    stats = MemStats()
-    stats.load('heap.dat')
+    stats = ConsoleStats()
+    stats.load('profile.dat')
     stats.sort_stats('size').print_stats(limit=10, filter='Node')
 
 HTML Statistics
 ~~~~~~~~~~~~~~~
 
-The Heapmonitor data can also be emitted in HTML format together with a number
-of charts (needs python-matplotlib). HTML statistics can be emitted directly,
-by specifying a file with the extension *.html* file as the profiling output::
+The Class Tracker data can also be emitted in HTML format together with a
+number of charts (needs python-matplotlib). HTML statistics can be emitted
+using the *HtmlStats* class::
 
-    heapmonitor.dump_stats('heap-profile.html')
+    from pympler.tracker.mstats import HtmlStats
+    HtmlStats(tracker=tracker).create_html('profile.html')
 
 However, you can also reprocess a previously generated dump::
 
-    from pympler.heapmonitor import HtmlStats
+    from pympler.tracker.mstats import HtmlStats
 
-    stats = HtmlStats('heap-profile.dat')
-    stats.create_html('heap-profile.html')
+    stats = HtmlStats(filename='profile.dat')
+    stats.create_html('profile.html')
 
 Limitations and Corner Cases
 ----------------------------
@@ -232,7 +237,7 @@ pattern looks like the following in the code::
     obj.__class__ = OtherClass
 
 If the instance which is morphed is already tracked, the instance will continue
-to be tracked by the Heapmonitor. If the target class is tracked but the
+to be tracked by the Class Tracker. If the target class is tracked but the
 instance is not, the instance will only be tracked if the constructor of the
 target class is called as part of the morphing process. The object will not be
 re-registered to the new class in the tracked object index. However, the new
@@ -245,9 +250,9 @@ Shared Data
 Data shared between multiple tracked object won't lead to overestimations.
 Shared data will be assigned to the first (evaluated) tracked object it is
 referenced from, but is only counted once. Tracked objects are evaluated in the
-order they were announced to the Heapmonitor. This should make the assignment
+order they were announced to the Class Tracker. This should make the assignment
 deterministic from one run to the next, but has two known problems. If the
-Heapmonitor is used concurrently from multiple threads, the announcement order
+Class Tracker is used concurrently from multiple threads, the announcement order
 will likely change and may lead to random assignment of shared data to
 different objects. Shared data might also be assigned to different objects
 during its lifetime, see the following example::
@@ -255,14 +260,17 @@ during its lifetime, see the following example::
     class A():
       pass
 
+    from pympler.tracker.classes import ClassTracker
+    tracker = ClassTracker()
+
     a = A()
-    heapmonitor.track_object(a)
+    tracker.track_object(a)
     b = A()
-    heapmonitor.track_object(b)
+    tracker.track_object(b)
     b.content = range(100000)
-    heapmonitor.create_snapshot('#1')
+    tracker.create_snapshot('#1')
     a.notmine = b.content
-    heapmonitor.create_snapshot('#2')
+    tracker.create_snapshot('#2')
 
 In the snapshot #1, *b*'s size will include the size of the large list. Then
 the list is shared with *a*. The snapshot *#2* will assign the list's footprint
@@ -275,7 +283,7 @@ are sized.
 Accuracy
 ~~~~~~~~
 
-Heapmonitor uses the `sizer` module to gather size informations. Asizeof makes
+Class Tracker uses the `sizer` module to gather size informations. Asizeof makes
 assumptions about the memory footprint of the various data types. As it is
 implemented in pure Python, there is no way to know how the actual Python
 implementation allocates data and lays it out in memory. Thus, the size numbers

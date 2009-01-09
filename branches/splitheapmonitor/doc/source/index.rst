@@ -17,7 +17,7 @@ Quick Links
 Table of Content
 ================
 * :ref:`asizeof` - A description of the asizeof module.
-* :ref:`heapmonitor` - A description of the heap monitor module.
+* :ref:`classtracker` - A description of the Class Tracker facility.
 * :ref:`muppy` - A description of the muppy module.
 * :ref:`pympler_library` - The library reference guide.
 * :ref:`related_work` - Other projects which deal which memory profiling in
