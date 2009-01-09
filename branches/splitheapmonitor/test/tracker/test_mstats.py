@@ -50,14 +50,14 @@ class LogTestCase(unittest.TestCase):
         f1 = StringIO()
         f2 = StringIO()
 
-        MemStats(tracker=self.tracker, stream=f1).print_stats()
+        ConsoleStats(tracker=self.tracker, stream=f1).print_stats()
 
         tmp = BytesIO()
         MemStats(tracker=self.tracker).dump_stats(tmp, close=0)
 
         self.tracker.clear()
 
-        stats = MemStats(stream=f2)
+        stats = ConsoleStats(stream=f2)
         assert stats.index is None
         assert stats.footprint is None
         tmp.seek(0)

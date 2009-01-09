@@ -1,8 +1,13 @@
 def trunc(s, max, left=0):
     """
-    Convert 's' to string, eliminate newlines and truncate the string to 'max'
-    characters. If there are more characters in the string add '...' to the
-    string. With 'left=1', the string can be truncated at the beginning.
+    Convert `s` to string, eliminate newlines and truncate the string to `max`
+    characters. If there are more characters in the string add ``...`` to the
+    string. With `left=True`, the string can be truncated at the beginning.
+
+    >>> trunc('This is a long text.', 8)
+    This ...
+    >>> trunc('This is a long text.', 8, left)
+    ...text.
     """
     s = str(s)
     s = s.replace('\n', '|')
