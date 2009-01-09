@@ -5,7 +5,7 @@ except ImportError:
     import pickle #PYCHOK Python 3.0 module
 from pympler.util.stringutils import trunc, pp, pp_timestamp
 
-__all__ = ["MemStats", "HtmlStats"]
+__all__ = ["MemStats", "ConsoleStats", "HtmlStats"]
 
 #
 # Off-line Analysis
@@ -191,7 +191,10 @@ class MemStats(object):
 
             snapshot.classes[classname] = {'sum': total, 'avg': avg, 'pct': pct, \
                 'active': active}
-        
+
+
+class ConsoleStats(MemStats):
+
     def print_stats(self, filter=None, limit=1.0):
         """
         Write tracked objects to stdout.  The output can be filtered and pruned.
