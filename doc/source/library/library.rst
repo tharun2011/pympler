@@ -10,8 +10,9 @@ Modules
 .. toctree::
    :maxdepth: 1
 
+   tracker/classes
+   tracker/mstats
    process
-   heapmonitor
    gui/graph
    gui/garbage
 
