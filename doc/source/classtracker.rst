@@ -80,8 +80,9 @@ To track the size of an individual object::
 Class Tracking
 ~~~~~~~~~~~~~~
 
-Most of the time, it's cumbersome to manually track individual instances. All
-instances of a class can automatically be tracked with *track_class*::
+Most of the time it's cumbersome to track individual instances
+manually. Instead, all instances of a class can automatically be tracked with
+*track_class*::
 
     tracker.track_class(MyClass)
 
@@ -247,7 +248,7 @@ sized.
 Shared Data
 ~~~~~~~~~~~
 
-Data shared between multiple tracked object won't lead to overestimations.
+Data shared between multiple tracked objects won't lead to overestimations.
 Shared data will be assigned to the first (evaluated) tracked object it is
 referenced from, but is only counted once. Tracked objects are evaluated in the
 order they were announced to the Class Tracker. This should make the assignment
