@@ -1,8 +1,8 @@
 .. _classtracker:
 
-===========================
-Class Tracker Documentation
-===========================
+==========================
+ClassTracker Documentation
+==========================
 
 Introduction
 ------------
@@ -35,7 +35,7 @@ Let's start with a simple example. Suppose you have this module::
     >>> factory = create_factory()
     >>> populate_factory(factory)
 
-The basic tools of the Class Tracker are tracking objects or classes, taking
+The basic tools of the `ClassTracker` are tracking objects or classes, taking
 snapshots, and printing or dumping statistics. The first step is to decide what
 to track. Then spots of interest for snapshot creation have to be identified.
 Finally, the gathered data can be printed or saved::
@@ -74,7 +74,7 @@ To track the size of an individual object::
     
     from pympler.tracker.classes import ClassTracker
     tracker = ClassTracker()
-    obj = MyObject()
+    obj = MyClass()
     tracker.track_object(obj)
 
 Class Tracking
@@ -93,7 +93,7 @@ Tracked Object Snapshot
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 Tracking alone will not reveal the size of an object. The idea of the
-Class Tracker is to sample the sizes of all tracked objects at configurable
+`ClassTracker` is to sample the sizes of all tracked objects at configurable
 instants in time. The `create_snapshot` function computes the size of all
 tracked objects::
 
@@ -135,7 +135,7 @@ raise the level of detail for a specific instance of a tracked class without
 logging all the class' instances with a high verbosity level. Nevertheless, the
 resolution level can also be set for all instances of a class::
 
-    tracker.track_class(MyObject, resolution_level=1)
+    tracker.track_class(MyClass, resolution_level=1)
 
 .. warning::
 
@@ -149,20 +149,20 @@ Instantiation traces
 ~~~~~~~~~~~~~~~~~~~~
 
 Sometimes it is not trivial to observe where an object was instantiated. The
-Class Tracker can record the instantiation stack trace for later evaluation. ::
+`ClassTracker` can record the instantiation stack trace for later evaluation. ::
 
-    tracker.track_class(MyObject, trace=1)
+    tracker.track_class(MyClass, trace=1)
 
 This only works with tracked classes, and **not** with individual objects.
 
 Background Monitoring
 ~~~~~~~~~~~~~~~~~~~~~
 
-The Class Tracker can be configured to take periodic snapshots automatically. The
+The `ClassTracker` can be configured to take periodic snapshots automatically. The
 following example will take 10 snapshots a second (approximately) until the
 program has exited or the periodic snapshots are stopped with
 `stop_periodic_snapshots`. Background monitoring also works if no object is
-tracked. In this mode, the Class Tracker will only record the total virtual
+tracked. In this mode, the `ClassTracker` will only record the total virtual
 memory associated with the program. This can be useful in combination with
 background monitoring to detect memory usage which is transient or not
 associated with any tracked object. ::
@@ -178,14 +178,14 @@ associated with any tracked object. ::
 Off-line Analysis
 ~~~~~~~~~~~~~~~~~
 
-The more data is gathered by the Class Tracker the more noise is produced on the
-console. The acquired Class Tracker log data can also be saved to a file for
+The more data is gathered by the `ClassTracker` the more noise is produced on the
+console. The acquired `ClassTracker` log data can also be saved to a file for
 off-line analysis::
 
     from pympler.tracker.mstats import MemStats
     MemStats(tracker=tracker).dump_stats('profile.dat')
 
-The `MemStats` class of the Class Tracker provides means to evaluate the collected
+The `MemStats` class of the `ClassTracker` provides means to evaluate the collected
 data. The API is inspired by the `Stats class
 <http://docs.python.org/lib/profile-stats.html>`_ of the Python profiler. It is
 possible to sort the data based on user preferences, filter by class and limit
@@ -203,7 +203,7 @@ objects to the standard output::
 HTML Statistics
 ~~~~~~~~~~~~~~~
 
-The Class Tracker data can also be emitted in HTML format together with a
+The `ClassTracker` data can also be emitted in HTML format together with a
 number of charts (needs python-matplotlib). HTML statistics can be emitted
 using the *HtmlStats* class::
 
@@ -224,26 +224,9 @@ Inheritance
 ~~~~~~~~~~~
 
 Class tracking allows to observe multiple classes that might have an
-inheritance relationship. An object is only tracked once. Thus, the tracking
+inheritance relationship. An object is only tracked once. The tracking
 parameters of the most specialized tracked class control the actual tracking of
 an instance.
-
-Morphing objects
-~~~~~~~~~~~~~~~~
-
-SCons instates the pattern of changing an instance' class at runtime, for
-example to morph abstract Node objects into File or Directory nodes. The
-pattern looks like the following in the code::
-
-    obj.__class__ = OtherClass
-
-If the instance which is morphed is already tracked, the instance will continue
-to be tracked by the Class Tracker. If the target class is tracked but the
-instance is not, the instance will only be tracked if the constructor of the
-target class is called as part of the morphing process. The object will not be
-re-registered to the new class in the tracked object index. However, the new
-class is stored in the representation of the object as soon as the object is
-sized.
 
 Shared Data
 ~~~~~~~~~~~
@@ -251,9 +234,9 @@ Shared Data
 Data shared between multiple tracked objects won't lead to overestimations.
 Shared data will be assigned to the first (evaluated) tracked object it is
 referenced from, but is only counted once. Tracked objects are evaluated in the
-order they were announced to the Class Tracker. This should make the assignment
+order they were announced to the `ClassTracker`. This should make the assignment
 deterministic from one run to the next, but has two known problems. If the
-Class Tracker is used concurrently from multiple threads, the announcement order
+`ClassTracker` is used concurrently from multiple threads, the announcement order
 will likely change and may lead to random assignment of shared data to
 different objects. Shared data might also be assigned to different objects
 during its lifetime, see the following example::
@@ -284,14 +267,32 @@ are sized.
 Accuracy
 ~~~~~~~~
 
-Class Tracker uses the `sizer` module to gather size informations. Asizeof makes
+`ClassTracker` uses the `sizer` module to gather size informations. Asizeof makes
 assumptions about the memory footprint of the various data types. As it is
 implemented in pure Python, there is no way to know how the actual Python
 implementation allocates data and lays it out in memory. Thus, the size numbers
 are not really accurate and there will always be a divergence between the
-virtual size of the SCons process as reported by the OS and the sizes asizeof
+virtual size of the Python process as reported by the OS and the sizes asizeof
 estimates.
 
 Most recent C/Python versions contain a `facility to report accurate size
 informations <http://bugs.python.org/issue2898>`_ of Python objects. If available,
 asizeof uses it to improve the accuracy.
+
+Morphing objects
+~~~~~~~~~~~~~~~~
+
+Some programs instate the (anti-)pattern of changing an instance' class at runtime, for
+example to morph abstract objects into specific derivations during runtime. The
+pattern looks like the following in the code::
+
+    obj.__class__ = OtherClass
+
+If the instance which is morphed is already tracked, the instance will continue
+to be tracked by the `ClassTracker`. If the target class is tracked but the
+instance is not, the instance will only be tracked if the constructor of the
+target class is called as part of the morphing process. The object will not be
+re-registered to the new class in the tracked object index. However, the new
+class is stored in the representation of the object as soon as the object is
+sized.
+
