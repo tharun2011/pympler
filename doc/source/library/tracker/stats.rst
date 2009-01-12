@@ -1,15 +1,15 @@
-.. _lib_tracker_mstats:
+.. _lib_tracker_stats:
    
 ========================
 Class Tracker Statistics
 ========================
 
-.. automodule:: pympler.tracker.mstats
+.. automodule:: pympler.tracker.stats
 
 Classes
 -------
 
-.. autoclass:: MemStats
+.. autoclass:: Stats
    :members: __init__, load_stats, sort_stats, dump_stats, reverse_order
 
 .. autoclass:: ConsoleStats

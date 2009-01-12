@@ -11,7 +11,7 @@ Modules
    :maxdepth: 1
 
    tracker/classes
-   tracker/mstats
+   tracker/stats
    process
    gui/graph
    gui/garbage

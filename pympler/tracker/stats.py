@@ -5,13 +5,13 @@ except ImportError:
     import pickle #PYCHOK Python 3.0 module
 from pympler.util.stringutils import trunc, pp, pp_timestamp
 
-__all__ = ["MemStats", "ConsoleStats", "HtmlStats"]
+__all__ = ["Stats", "ConsoleStats", "HtmlStats"]
 
 #
 # Off-line Analysis
 #
 
-class MemStats(object):
+class Stats(object):
     """
     Presents the memory statisitics gathered by a `ClassTracker` based on user
     preferences.
@@ -94,7 +94,7 @@ class MemStats(object):
         all the entries according to their class name, and resolve all ties
         (identical class names) by sorting by size.  The criteria are fields in
         the tracked object instances. Results are stored in the `self.sorted`
-        list which is used by `MemStats.print_stats()` and other methods. The
+        list which is used by `Stats.print_stats()` and other methods. The
         fields available for sorting are:
 
           'classname' : the name with which the class was registered
@@ -193,7 +193,7 @@ class MemStats(object):
                 'active': active}
 
 
-class ConsoleStats(MemStats):
+class ConsoleStats(Stats):
 
     def print_stats(self, filter=None, limit=1.0):
         """
@@ -255,7 +255,7 @@ class ConsoleStats(MemStats):
                         (trunc(classname, 33), active, pp(total), pp(avg), pct))
         fobj.write('-'*79+'\n')
 
-class HtmlStats(MemStats):
+class HtmlStats(Stats):
     """
     Output the Heapmonitor statistics as HTML pages and graphs.
     """
