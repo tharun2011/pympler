@@ -6,8 +6,8 @@ try:
 except ImportError:
     from io import StringIO, BytesIO
 
-from pympler.tracker.classes import *
-from pympler.tracker.mstats import *
+from pympler.tracker import ClassTracker
+from pympler.tracker.stats import *
 
 class Foo:
     def __init__(self):
@@ -53,7 +53,7 @@ class LogTestCase(unittest.TestCase):
         ConsoleStats(tracker=self.tracker, stream=f1).print_stats()
 
         tmp = BytesIO()
-        MemStats(tracker=self.tracker).dump_stats(tmp, close=0)
+        Stats(tracker=self.tracker).dump_stats(tmp, close=0)
 
         self.tracker.clear()
 

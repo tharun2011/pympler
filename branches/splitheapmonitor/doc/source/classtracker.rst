@@ -41,14 +41,14 @@ to track. Then spots of interest for snapshot creation have to be identified.
 Finally, the gathered data can be printed or saved::
     
     >>> factory = create_factory()
-    >>> from pympler.tracker.classes import ClassTracker
+    >>> from pympler.tracker import ClassTracker
     >>> tracker = ClassTracker()
     >>> tracker.track_object(factory)
     >>> tracker.track_class(Employee)
     >>> tracker.create_snapshot()
     >>> populate_factory(factory)
     >>> tracker.create_snapshot()
-    >>> from pympler.tracker.mstats import ConsoleStats
+    >>> from pympler.tracker.stats import ConsoleStats
     >>> ConsoleStats(tracker=tracker).print_summary()
     ---- SUMMARY ------------------------------------------------------------------
                                              active      1.22 MB      average   pct
@@ -72,7 +72,7 @@ size of the object is sampled when taking a snapshot.
 
 To track the size of an individual object::
     
-    from pympler.tracker.classes import ClassTracker
+    from pympler.tracker import ClassTracker
     tracker = ClassTracker()
     obj = MyClass()
     tracker.track_object(obj)
@@ -182,10 +182,10 @@ The more data is gathered by the `ClassTracker` the more noise is produced on th
 console. The acquired `ClassTracker` log data can also be saved to a file for
 off-line analysis::
 
-    from pympler.tracker.mstats import MemStats
-    MemStats(tracker=tracker).dump_stats('profile.dat')
+    from pympler.tracker.stats import Stats
+    Stats(tracker=tracker).dump_stats('profile.dat')
 
-The `MemStats` class of the `ClassTracker` provides means to evaluate the collected
+The `Stats` class of the `ClassTracker` provides means to evaluate the collected
 data. The API is inspired by the `Stats class
 <http://docs.python.org/lib/profile-stats.html>`_ of the Python profiler. It is
 possible to sort the data based on user preferences, filter by class and limit
@@ -194,7 +194,7 @@ the output noise to a manageable magnitude.
 The following example reads the dumped data and prints the ten largest Node
 objects to the standard output::
 
-    from pympler.tracker.mstats import ConsoleStats
+    from pympler.tracker.stats import ConsoleStats
 
     stats = ConsoleStats()
     stats.load('profile.dat')
@@ -207,12 +207,12 @@ The `ClassTracker` data can also be emitted in HTML format together with a
 number of charts (needs python-matplotlib). HTML statistics can be emitted
 using the *HtmlStats* class::
 
-    from pympler.tracker.mstats import HtmlStats
+    from pympler.tracker.stats import HtmlStats
     HtmlStats(tracker=tracker).create_html('profile.html')
 
 However, you can also reprocess a previously generated dump::
 
-    from pympler.tracker.mstats import HtmlStats
+    from pympler.tracker.stats import HtmlStats
 
     stats = HtmlStats(filename='profile.dat')
     stats.create_html('profile.html')
@@ -244,7 +244,7 @@ during its lifetime, see the following example::
     class A():
       pass
 
-    from pympler.tracker.classes import ClassTracker
+    from pympler.tracker import ClassTracker
     tracker = ClassTracker()
 
     a = A()

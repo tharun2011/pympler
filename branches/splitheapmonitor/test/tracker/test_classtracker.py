@@ -2,7 +2,7 @@ import unittest
 import gc
 import re
 
-from pympler.tracker.classes import *
+from pympler.tracker import ClassTracker
 import pympler.process
 
 class Foo:
