@@ -10,32 +10,32 @@ from gc import get_referents
 from inspect import getmembers
 from subprocess import Popen, PIPE
 
-__all__ = ['GraphBrowser']
+__all__ = ['ReferenceGraph']
 
 class _MetaObject(object):
     """
     The _MetaObject stores meta-information, like a string representation,
-    corresponding to each object passed to a GraphBrowser.
+    corresponding to each object passed to a ReferenceGraph.
     """
     __slots__ = ('size', 'id', 'type', 'str')
 
 
-class GraphBrowser(object):
+class ReferenceGraph(object):
     """
-    The GraphBrowser illustrates the references between a collection of objects
+    The ReferenceGraph illustrates the references between a collection of objects
     by rendering a directed graph. That requires that 'graphviz' is installed.
 
-    >>> from pympler.gui.graph import GraphBrowser
+    >>> from pympler.gui.graph import ReferenceGraph
     >>> a = 42
     >>> b = 'spam'
     >>> c = {a: b}
-    >>> gb = GraphBrowser([a,b,c])
+    >>> gb = ReferenceGraph([a,b,c])
     >>> gb.render('spam.eps')
     True
     """
     def __init__(self, objects, reduce=False):
         """
-        Initialize the GraphBrowser with a collection of `objects`. 
+        Initialize the ReferenceGraph with a collection of `objects`. 
         """
         self.objects = list(objects)
         self.count = len(self.objects)

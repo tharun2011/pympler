@@ -9,7 +9,7 @@ graph
 Classes
 -------
 
-.. autoclass:: GraphBrowser
+.. autoclass:: ReferenceGraph
 
    .. automethod:: __init__
    

@@ -1,13 +1,13 @@
-from pympler.gui.graph import GraphBrowser
+from pympler.gui.graph import ReferenceGraph
 from pympler.util.stringutils import trunc, pp
 import sys
 import gc
 
-__all__ = ['GarbageBrowser', 'start_debug_garbage', 'end_debug_garbage']
+__all__ = ['GarbageGraph', 'start_debug_garbage', 'end_debug_garbage']
 
-class GarbageBrowser(GraphBrowser):
+class GarbageGraph(ReferenceGraph):
     """
-    The GarbageBrowser is a GraphBrowser that illustrates the objects building
+    The GarbageGraph is a ReferenceGraph that illustrates the objects building
     reference cycles. The garbage collector is switched to debug mode (all
     identified garbage is stored in 'gc.garbage') and the garbage collector is
     invoked. The collected objects are then illustrated in a directed graph.
@@ -16,20 +16,20 @@ class GarbageBrowser(GraphBrowser):
     the constructor. 
     
     It is recommended to disable the garbage collector when using the
-    GarbageBrowser.
+    GarbageGraph.
 
-    >>> from pympler.gui.garbage import GarbageBrowser, start_debug_garbage
+    >>> from pympler.gui.garbage import GarbageGraph, start_debug_garbage
     >>> start_debug_garbage()
     >>> l = []
     >>> l.append(l)
     >>> del l
-    >>> gb = GarbageBrowser()
+    >>> gb = GarbageGraph()
     >>> gb.render('garbage.eps')
     True
     """
     def __init__(self, reduce=False, collectable=True):
         """
-        Initialize the GarbageBrowser with the objects identified by the garbage
+        Initialize the GarbageGraph with the objects identified by the garbage
         collector. If `collectable` is true, every reference cycle is recorded.
         Otherwise only uncollectable objects are reported.
         """
@@ -39,7 +39,7 @@ class GarbageBrowser(GraphBrowser):
             gc.set_debug(0)
         gc.collect()
 
-        GraphBrowser.__init__(self, gc.garbage, reduce)
+        ReferenceGraph.__init__(self, gc.garbage, reduce)
 
     def print_stats(self, fobj=sys.stdout):
         """

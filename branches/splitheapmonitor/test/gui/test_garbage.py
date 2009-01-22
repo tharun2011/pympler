@@ -49,7 +49,7 @@ class GarbageTestCase(unittest.TestCase):
         del foo
         del bar
 
-        gb = GarbageBrowser()
+        gb = GarbageGraph()
 
         assert gb.count == len(gc.garbage)
         assert gb.count >= 2
@@ -82,8 +82,8 @@ class GarbageTestCase(unittest.TestCase):
         del foo
         del bar
 
-        gb1 = GarbageBrowser()
-        gb2 = GarbageBrowser(reduce=1)
+        gb1 = GarbageGraph()
+        gb2 = GarbageGraph(reduce=1)
 
         assert gb1.count == gb2.count
         assert len(gb1.metadata) > len(gb2.metadata)
@@ -110,7 +110,7 @@ class GarbageTestCase(unittest.TestCase):
         del foo
         del bar
 
-        gb = GarbageBrowser()
+        gb = GarbageGraph()
 
         assert (idfoo, idfd, '__dict__') in gb.edges, gb.edges
         assert (idfd, idbar, 'next') in gb.edges, gb.edges
@@ -134,7 +134,7 @@ class GarbageTestCase(unittest.TestCase):
         del foo
         del bar
 
-        gb = GarbageBrowser()
+        gb = GarbageGraph()
 
         assert (idfoo, idfd, '__dict__') in gb.edges, gb.edges
         assert (idfd, idbar, 'next') in gb.edges, gb.edges
@@ -156,7 +156,7 @@ class GarbageTestCase(unittest.TestCase):
         del foo
         del enemy
 
-        gb = GarbageBrowser(collectable=0)
+        gb = GarbageGraph(collectable=0)
 
         gfoo = [x for x in gb.metadata if x.id == idfoo]
         assert len(gfoo) == 0

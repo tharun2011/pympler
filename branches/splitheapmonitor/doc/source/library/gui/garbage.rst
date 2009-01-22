@@ -19,7 +19,7 @@ Reference cycles can be visualized with the help of
 Classes
 -------
 
-.. autoclass:: GarbageBrowser
+.. autoclass:: GarbageGraph
 
    .. automethod:: __init__
 
