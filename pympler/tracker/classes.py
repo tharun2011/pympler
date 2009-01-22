@@ -479,7 +479,7 @@ class ClassTracker(object):
         """
         Collect current per instance statistics.
         Save total amount of memory consumption reported by asizeof and by the
-        operating system. The overhead of the Heapmonitor structure is also
+        operating system. The overhead of the ClassTracker structure is also
         computed.
         """
 
@@ -522,7 +522,7 @@ class ClassTracker(object):
             # Compute overhead of all structures, use sizer to exclude tracked objects(!)
             fp.overhead = 0
             if fp.tracked_total:
-                fp.overhead = sizer.asizeof(self.index, self.objects, self.footprint)
+                fp.overhead = sizer.asizeof(self)
                 fp.asizeof_total -= fp.overhead
 
             self.footprint.append(fp)

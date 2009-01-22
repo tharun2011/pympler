@@ -257,7 +257,7 @@ class ConsoleStats(Stats):
 
 class HtmlStats(Stats):
     """
-    Output the Heapmonitor statistics as HTML pages and graphs.
+    Output the `ClassTracker` statistics as HTML pages and graphs.
     """
 
     style          = """<style type="text/css">
@@ -378,7 +378,7 @@ class HtmlStats(Stats):
 
     snapshot_summary = """<p>Total virtual memory assigned to the program at that time
         was %(sys)s, which includes %(overhead)s profiling overhead. The
-        Heapmonitor tracked %(tracked)s in total. The measurable objects
+        ClassTracker tracked %(tracked)s in total. The measurable objects
         including code objects but excluding overhead have a total size of
         %(asizeof)s.</p>\n"""
 
@@ -547,7 +547,7 @@ class HtmlStats(Stats):
 
         return self.chart_tag % (filename)
 
-    def create_html(self, fname, title="Heapmonitor Statistics"):
+    def create_html(self, fname, title="ClassTracker Statistics"):
         """
         Create HTML page `fname` and additional files in a directory derived
         from `fname`.

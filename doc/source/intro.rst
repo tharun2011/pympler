@@ -6,7 +6,7 @@ the lifetime of Python objects can be obtained.  Undesirable or
 unexpected runtime behavior like memory bloat and other "pymples"
 can easily be identified.
 
-Pympler integrates 3 previously separate modules into a single,
+Pympler integrates three previously separate modules into a single,
 comprehensive profiling tool.  The :ref:`asizeof <asizeof>` module
 provides basic size information for one or several Python objects,
 module :ref:`muppy <muppy>` is used for on-line monitoring of a Python
