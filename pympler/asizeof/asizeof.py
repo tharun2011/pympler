@@ -163,10 +163,11 @@ from inspect    import isbuiltin, isclass, iscode, isframe, \
                        isfunction, ismethod, ismodule, stack
 from math       import log
 from os         import linesep
-from struct     import calcsize  # type/class Struct only in Python 2.5+
 import sys
 import types    as     Types
 import weakref  as     Weakref
+
+import sizes
 
 __version__ = '5.10 (Dec 04, 2008)'
 __all__     = ['adict', 'asized', 'asizeof', 'asizesof',
@@ -179,64 +180,6 @@ if __name__ == '__main__':
     _builtin_modules = (int.__module__, 'types', Exception.__module__)  # , 'weakref'
 else:  # treat this very module as built-in
     _builtin_modules = (int.__module__, 'types', Exception.__module__, __name__)  # , 'weakref'
-
- # sizes of some primitive C types
- # XXX len(pack(T, 0)) == Struct(T).size == calcsize(T)
-_sizeof_Cbyte  = calcsize('c')  # sizeof(unsigned char)
-_sizeof_Clong  = calcsize('l')  # sizeof(long)
-_sizeof_Cvoidp = calcsize('P')  # sizeof(void*)
-
-def _calcsize(fmt):
-    '''struct.calcsize() handling 'z' for Py_ssize_t.
-    '''
-     # sizeof(long) != sizeof(ssize_t) on LLP64
-    if _sizeof_Clong < _sizeof_Cvoidp:
-        z = 'P'
-    else:
-        z = 'L'
-    return calcsize(fmt.replace('z', z))
-
- # defaults for some basic sizes with 'z' for C Py_ssize_t
-_sizeof_CPyCodeObject   = _calcsize('Pz10P5i0P')    # sizeof(PyCodeObject)
-_sizeof_CPyFrameObject  = _calcsize('Pzz13P63i0P')  # sizeof(PyFrameObject)
-_sizeof_CPyModuleObject = _calcsize('PzP0P')        # sizeof(PyModuleObject)
-
- # defaults for some item sizes with 'z' for C Py_ssize_t
-_sizeof_CPyDictEntry    = _calcsize('z2P')  # sizeof(PyDictEntry)
-_sizeof_Csetentry       = _calcsize('lP')   # sizeof(setentry)
-
-try:  # C typedef digit for multi-precision int (or long)
-    _sizeof_Cdigit = long.__itemsize__
-except NameError:  # no long in Python 3.0
-    _sizeof_Cdigit = int.__itemsize__
-if _sizeof_Cdigit < 2:
-    raise AssertionError('sizeof(%s) bad: %d' % ('digit', _sizeof_Cdigit))
-
-try:  # sizeof(unicode_char)
-    u = unicode('\0')
-except NameError:  # no unicode() in Python 3.0
-    u = '\0'
-u = u.encode('unicode-internal')  # see .../Lib/test/test_sys.py
-_sizeof_Cunicode = len(u)
-del u
-if sys.maxunicode >= (1 << (_sizeof_Cunicode << 3)):
-    raise AssertionError('sizeof(%s) bad: %d' % ('unicode', _sizeof_Cunicode))
-
-try:  # size of GC header, sizeof(PyGC_Head)
-    import _testcapi as t
-    _sizeof_CPyGC_Head = t.SIZEOF_PYGC_HEAD  # new in Python 2.6
-except (ImportError, AttributeError):  # sizeof(PyGC_Head)
-     # alignment should be to sizeof(long double) but there
-     # is no way to obtain that value, assume twice double
-    t = calcsize('2d') - 1
-    _sizeof_CPyGC_Head = (_calcsize('2Pz') + t) & ~t
-del t
-
- # size of refcounts (Python debug build only)
-if hasattr(sys, 'gettotalrefcount'):
-    _sizeof_Crefcounts = _calcsize('2z')
-else:
-    _sizeof_Crefcounts =  0
 
  # some flags from .../Include/object.h
 _Py_TPFLAGS_HEAPTYPE = 1 <<  9  # Py_TPFLAGS_HEAPTYPE
@@ -328,9 +271,9 @@ def _basicsize(t, base=0, heap=False, obj=None):
     else:  # None has no __flags__ attr
        h = getattr(obj, '__flags__', 0) & _Py_TPFLAGS_HEAPTYPE
     if h:
-       s += _sizeof_CPyGC_Head
+       s += sizes._sizeof_CPyGC_Head
      # include reference counters
-    return s + _sizeof_Crefcounts
+    return s + sizes._sizeof_Crefcounts
 
 def _derive_typedef(typ):
     '''Return single, existing super type typedef or None.
@@ -714,7 +657,7 @@ def _len_frame(obj):
        n = 0
     return n
 
-_digit2p2 =  1 << (_sizeof_Cdigit << 3)
+_digit2p2 =  1 << (sizes._sizeof_Cdigit << 3)
 _digitmax = _digit2p2 - 1  # == (2 * PyLong_MASK + 1)
 _digitlog =  1.0 / log(_digit2p2)
 
@@ -1100,24 +1043,24 @@ def _typedef_code(t, base=0, refs=None, kind=_kind_static, heap=False):
  # static typedefs for data and code types
 _typedef_both(complex)
 _typedef_both(float)
-_typedef_both(list,     refs=_seq_refs, leng=_len_list, item=_sizeof_Cvoidp)  # sizeof(PyObject*)
-_typedef_both(tuple,    refs=_seq_refs, leng=_len,      item=_sizeof_Cvoidp)  # sizeof(PyObject*)
+_typedef_both(list,     refs=_seq_refs, leng=_len_list, item=sizes._sizeof_Cvoidp)  # sizeof(PyObject*)
+_typedef_both(tuple,    refs=_seq_refs, leng=_len,      item=sizes._sizeof_Cvoidp)  # sizeof(PyObject*)
 _typedef_both(property, refs=_prop_refs)
 _typedef_both(type(Ellipsis))
 _typedef_both(type(None))
 
  # _Slots is a special tuple, see _Slots.__doc__
-_typedef_both(_Slots, item=_sizeof_Cvoidp,
+_typedef_both(_Slots, item=sizes._sizeof_Cvoidp,
                       leng=_len_slots,  # length less one
                       refs=None,  # but no referents
                       heap=True)  # plus head
 
  # dict, dictproxy, dict_proxy and other dict-like types
-_dict_typedef = _typedef_both(dict,        item=_sizeof_CPyDictEntry, leng=_len_dict, refs=_dict_refs)
+_dict_typedef = _typedef_both(dict,        item=sizes._sizeof_CPyDictEntry, leng=_len_dict, refs=_dict_refs)
 try:  # <type dictproxy> only in Python 2.x
-    _typedef_both(Types.DictProxyType,     item=_sizeof_CPyDictEntry, leng=_len_dict, refs=_dict_refs)
+    _typedef_both(Types.DictProxyType,     item=sizes._sizeof_CPyDictEntry, leng=_len_dict, refs=_dict_refs)
 except AttributeError:  # XXX any class __dict__ is <type dict_proxy> in Python 3.0?
-    _typedef_both(type(_Typedef.__dict__), item=_sizeof_CPyDictEntry, leng=_len_dict, refs=_dict_refs)
+    _typedef_both(type(_Typedef.__dict__), item=sizes._sizeof_CPyDictEntry, leng=_len_dict, refs=_dict_refs)
  # other dict-like classes and types may be derived or inferred,
  # provided the module and class name is listed here (see functions
  # adict, _isdictclass and _infer_dict for further details)
@@ -1125,7 +1068,7 @@ _dict_classes = {'UserDict': ('IterableUserDict',  'UserDict'),
                  'weakref' : ('WeakKeyDictionary', 'WeakValueDictionary')}
 try:  # <type module> is essentially a dict
     _typedef_both(Types.ModuleType, base=_dict_typedef.base,
-                                    item=_dict_typedef.item + _sizeof_CPyModuleObject,
+                                    item=_dict_typedef.item + sizes._sizeof_CPyModuleObject,
                                     leng=_len_module, refs=_module_refs)
 except AttributeError:  # missing
     pass
@@ -1133,7 +1076,7 @@ except AttributeError:  # missing
  # newer or obsolete types
 try:
     from array import array  # array type
-    _typedef_both(array, leng=_len_array, item=_sizeof_Cbyte)
+    _typedef_both(array, leng=_len_array, item=sizes._sizeof_Cbyte)
 except ImportError:  # missing
     pass
 
@@ -1149,23 +1092,23 @@ except NameError:  # missing
 
 try:
     if isbuiltin(buffer):  # Python 2.2
-        _typedef_both(type(buffer('')), item=_sizeof_Cbyte, leng=_len)  # XXX len in bytes?
+        _typedef_both(type(buffer('')), item=sizes._sizeof_Cbyte, leng=_len)  # XXX len in bytes?
     else:
-        _typedef_both(buffer,           item=_sizeof_Cbyte, leng=_len)  # XXX len in bytes?
+        _typedef_both(buffer,           item=sizes._sizeof_Cbyte, leng=_len)  # XXX len in bytes?
 except NameError:  # missing
     pass
 
 try:
-    _typedef_both(bytearray, item=_sizeof_Cbyte, leng=_len_bytearray)  #PYCHOK bytearray new in 2.6, 3.0
+    _typedef_both(bytearray, item=sizes._sizeof_Cbyte, leng=_len_bytearray)  #PYCHOK bytearray new in 2.6, 3.0
 except NameError:  # missing
     pass
 try:
     if type(bytes) is not type(str):  # bytes is str in 2.6 #PYCHOK bytes new in 2.6, 3.0
-      _typedef_both(bytes, item=_sizeof_Cbyte, leng=_len)  #PYCHOK bytes new in 2.6, 3.0
+      _typedef_both(bytes, item=sizes._sizeof_Cbyte, leng=_len)  #PYCHOK bytes new in 2.6, 3.0
 except NameError:  # missing
     pass
 try:  # XXX like bytes
-    _typedef_both(str8, item=_sizeof_Cbyte, leng=_len)  #PYCHOK str8 new in 2.6, 3.0
+    _typedef_both(str8, item=sizes._sizeof_Cbyte, leng=_len)  #PYCHOK str8 new in 2.6, 3.0
 except NameError:  # missing
     pass
 
@@ -1185,11 +1128,11 @@ except NameError:  # missing
     pass
 
 try:
-    _typedef_both(frozenset, item=_sizeof_Csetentry, leng=_len_set, refs=_seq_refs)
+    _typedef_both(frozenset, item=sizes._sizeof_Csetentry, leng=_len_set, refs=_seq_refs)
 except NameError:  # missing
     pass
 try:
-    _typedef_both(set,       item=_sizeof_Csetentry, leng=_len_set, refs=_seq_refs)
+    _typedef_both(set,       item=sizes._sizeof_Csetentry, leng=_len_set, refs=_seq_refs)
 except NameError:  # missing
     pass
 
@@ -1199,10 +1142,10 @@ except AttributeError:  # missing
     pass
 
 try:  # if long exists, it is multi-precision ...
-    _typedef_both(long, item=_sizeof_Cdigit, leng=_len_int)
+    _typedef_both(long, item=sizes._sizeof_Cdigit, leng=_len_int)
     _typedef_both(int)  # ... and int is fixed size
 except NameError:  # no long, only multi-precision int in Python 3.0
-    _typedef_both(int,  item=_sizeof_Cdigit, leng=_len_int)
+    _typedef_both(int,  item=sizes._sizeof_Cdigit, leng=_len_int)
 
 try:  # not callable()
     _typedef_both(Types.MemberDescriptorType)
@@ -1229,7 +1172,7 @@ except NameError:  # missing
     pass
 
 try:
-    _typedef_both(slice, item=_sizeof_Cvoidp, leng=_len_slice)  # XXX worst-case itemsize?
+    _typedef_both(slice, item=sizes._sizeof_Cvoidp, leng=_len_slice)  # XXX worst-case itemsize?
 except NameError:  # missing
     pass
 
@@ -1237,13 +1180,13 @@ try:
     from os import curdir, stat, statvfs
     _typedef_both(type(stat(   curdir)), refs=_stat_refs)     # stat_result
     _typedef_both(type(statvfs(curdir)), refs=_statvfs_refs,  # statvfs_result
-                                         item=_sizeof_Cvoidp, leng=_len)
+                                         item=sizes._sizeof_Cvoidp, leng=_len)
 except ImportError:  # missing
     pass
 
 try:
     from struct import Struct  # only in Python 2.5 and 3.0
-    _typedef_both(Struct, item=_sizeof_Cbyte, leng=_len_struct)  # len in bytes
+    _typedef_both(Struct, item=sizes._sizeof_Cbyte, leng=_len_struct)  # len in bytes
 except ImportError:  # missing
     pass
 
@@ -1253,10 +1196,10 @@ except AttributeError:  # missing
     pass
 
 try:
-    _typedef_both(unicode, leng=_len_unicode, item=_sizeof_Cunicode)
-    _typedef_both(str,     leng=_len,         item=_sizeof_Cbyte)  # 1-byte char
+    _typedef_both(unicode, leng=_len_unicode, item=sizes._sizeof_Cunicode)
+    _typedef_both(str,     leng=_len,         item=sizes._sizeof_Cbyte)  # 1-byte char
 except NameError:  # str is unicode
-    _typedef_both(str,     leng=_len_unicode, item=_sizeof_Cunicode)
+    _typedef_both(str,     leng=_len_unicode, item=sizes._sizeof_Cunicode)
 
 try:  # <type 'KeyedRef'>
     _typedef_both(Weakref.KeyedRef, refs=_weak_refs, heap=True)  # plus head
@@ -1339,17 +1282,17 @@ def _typedef(obj, derive=False, infer=False):
                  kind=_kind_dynamic, type=t)
   ##_printf('new %r %r/%r %s', t, _basicsize(t), _itemsize(t), _repr(dir(obj)))
     if ismodule(obj):  # handle module like dict
-        v.dup(item=_dict_typedef.item + _sizeof_CPyModuleObject,
+        v.dup(item=_dict_typedef.item + sizes._sizeof_CPyModuleObject,
               leng=_len_module,
               refs=_module_refs)
     elif isframe(obj):
-        v.set(base=_basicsize(t, base=_sizeof_CPyFrameObject, obj=obj),
+        v.set(base=_basicsize(t, base=sizes._sizeof_CPyFrameObject, obj=obj),
               item=_itemsize(t),
               leng=_len_frame,
               refs=_frame_refs)
     elif iscode(obj):
-        v.set(base=_basicsize(t, base=_sizeof_CPyCodeObject, obj=obj),
-              item=_sizeof_Cvoidp,
+        v.set(base=_basicsize(t, base=sizes._sizeof_CPyCodeObject, obj=obj),
+              item=sizes._sizeof_Cvoidp,
               leng=_len_code,
               refs=_co_refs,
               both=False)  # code only
@@ -1774,7 +1717,7 @@ class Asizer(object):
         _printf('%*d bytes%s%s', w, self._total, _SI(self._total), self._incl, **print3opts)
         if self._mask:
             _printf('%*d byte aligned', w, self._mask + 1, **print3opts)
-        _printf('%*d byte sizeof(void*)', w, _sizeof_Cvoidp, **print3opts)
+        _printf('%*d byte sizeof(void*)', w, sizes._sizeof_Cvoidp, **print3opts)
         n = len(objs or ())
         if n > 0:
             d = self._duplicate or ''
@@ -2365,9 +2308,7 @@ if __name__ == '__main__':
             _print_asizeof(o, infer=True)
 
     if _opts('-C'):  # show all Csizeof values
-        _sizeof_Cdouble  = _calcsize('d')  #PYCHOK OK
-        _sizeof_Cssize_t = _calcsize('z')  #PYCHOK OK
-        t = [t for t in locals().items() if t[0].startswith('_sizeof_')]
+        t = [t for t in sizes.__dict__.items() if t[0].startswith('_sizeof_')]
         _printf('%s%d C sizes: (bytes) ... -C', linesep, len(t))
         for n, v in _sorted(t):
             _printf(' sizeof(%s): %r', n[len('_sizeof_'):], v)
