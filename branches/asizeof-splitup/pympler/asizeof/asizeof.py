@@ -132,7 +132,7 @@ sizes of Python objects (for Python 2.2 or later [#test]_).
    In addition, many ``__...__`` attributes of callable objects are
    ignored [#arb]_, except crucial ones, e.g. class attributes ``__dict__``,
    ``__doc__``, ``__name__`` and ``__slots__``.  For more details, see the
-   type-specific ``_..._refs()`` and ``_len_...()`` functions below.
+   type-specific ``typeinfo._..._refs()`` and ``typeinfo._len_...()`` functions below.
 
 .. rubric:: Footnotes
 .. [#unsafe] The functions and classes in this module are not thread-safe.
@@ -155,20 +155,22 @@ sizes of Python objects (for Python 2.2 or later [#test]_).
      Panther 10.3.9 (PPC), Solaris 10 and Windows XP all 32-bit Python
      and on RHEL 3u7 and Solaris 10 both 64-bit Python.
 
+
 '''  #PYCHOK expected
 
 from __future__ import generators  #PYCHOK for yield in Python 2.2
 
 from inspect    import isbuiltin, isclass, iscode, isframe, \
                        isfunction, ismethod, ismodule, stack
-from math       import log
 from os         import linesep
 import sys
 import types    as     Types
 import weakref  as     Weakref
 
+import common
 import compat
 import sizes
+import typeinfo
 
 __version__ = '5.10 (Dec 04, 2008)'
 __all__     = ['adict', 'asized', 'asizeof', 'asizesof',
@@ -216,36 +218,6 @@ def _derive_typedef(typ):
         return v[0]
     return None
 
-def _dir2(obj, pref='', excl=(), slots=None, itor=''):
-    '''Return an attribute name, object 2-tuple for certain
-       attributes or for the ``__slots__`` attributes of the
-       given object, but not both.  Any iterator referent
-       objects are returned with the given name if the
-       latter is non-empty.
-    '''
-    if slots:  # __slots__ attrs
-        if hasattr(obj, slots):
-             # collect all inherited __slots__ attrs
-             # from list, tuple, or dict __slots__,
-             # while removing any duplicate attrs
-            s = {}
-            for c in type(obj).mro():
-                for a in getattr(c, slots, ()):
-                    if hasattr(obj, a):
-                        s.setdefault(a, getattr(obj, a))
-             # assume __slots__ tuple/list
-             # is holding the attr values
-            yield slots, _Slots(s)  # compat._keys(s)
-            for t in compat._items(s):
-                yield t  # attr name, value
-    elif itor:  # iterator referents
-        for o in obj:  # iter(obj)
-            yield itor, o
-    else:  # regular attrs
-        for a in dir(obj):
-            if a.startswith(pref) and a not in excl and hasattr(obj, a):
-               yield a, getattr(obj, a)
-
 def _infer_dict(obj):
     '''Return True for likely dict object.
     '''
@@ -291,16 +263,11 @@ def _lengstr(obj):
     n = leng(obj)
     if n is None:  # no len
        r = ''
-    elif n > _len(obj):  # extended
+    elif n > typeinfo._len(obj):  # extended
        r = ' leng %d!' % n
     else:
        r = ' leng %d' % n
     return r
-
-def _nameof(obj, dflt=''):
-    '''Return the name of an object.
-    '''
-    return getattr(obj, '__name__', dflt)
 
 def _objs_opts(objs, all=None, **opts):
     '''Return given or 'all' objects
@@ -337,18 +304,10 @@ def _plural(num):
         s = 's'
     return s
 
-def _power2(n):
-    '''Find the next power of 2.
-    '''
-    p2 = 16
-    while n > p2:
-        p2 += p2
-    return p2
-
 def _prepr(obj, clip=0):
     '''Prettify and clip long repr() string.
     '''
-    return _repr(obj, clip=clip).strip('<>').replace("'", '')  # remove <''>
+    return common._repr(obj, clip=clip).strip('<>').replace("'", '')  # remove <''>
 
 def _printf(fmt, *args, **print3opts):
     '''Formatted print.
@@ -365,37 +324,6 @@ def _printf(fmt, *args, **print3opts):
     else:
         print(fmt)
 
-def _refs(obj, named, *ats, **kwds):
-    '''Return specific attribute objects of an object.
-    '''
-    if named:
-        for a in ats:  # cf. inspect.getmembers()
-            if hasattr(obj, a):
-                yield _NamedRef(a, getattr(obj, a))
-        if kwds:  # kwds are _dir2() args
-            for a, o in _dir2(obj, **kwds):
-                yield _NamedRef(a, o)
-    else:
-        for a in ats:  # cf. inspect.getmembers()
-            if hasattr(obj, a):
-                yield getattr(obj, a)
-        if kwds:  # kwds are _dir2() args
-            for _, o in _dir2(obj, **kwds):
-                yield o
-
-def _repr(obj, clip=80):
-    '''Clip long repr() string.
-    '''
-    try:  # safe repr()
-        r = repr(obj)
-    except TypeError:
-        r = 'N/A'
-    if 0 < clip < len(r):
-        h = (clip // 2) - 2
-        if h > 0:
-            r = r[:h] + '....' + r[-h:]
-    return r
-
 def _SI(size, K=1024, i='i'):
     '''Return size as SI string.
     '''
@@ -411,269 +339,6 @@ def _SI2(size, **kwds):
     '''Return size as regular plus SI string.
     '''
     return str(size) + _SI(size, **kwds)
-
- # type-specific referent functions
-
-def _class_refs(obj, named):
-    '''Return specific referents of a class object.
-    '''
-    return _refs(obj, named, '__class__', '__dict__',  '__doc__', '__mro__',
-                             '__name__',  '__slots__', '__weakref__')
-
-def _co_refs(obj, named):
-    '''Return specific referents of a code object.
-    '''
-    return _refs(obj, named, pref='co_')
-
-def _dict_refs(obj, named):
-    '''Return key and value objects of a dict/proxy.
-    '''
-    if named:
-        for k, v in compat._items(obj):
-            s = str(k)
-            yield _NamedRef('[K] ' + s, k)
-            yield _NamedRef('[V] ' + s + ': ' + _repr(v), v)
-    else:
-        for k, v in compat._items(obj):
-            yield k
-            yield v
-
-def _enum_refs(obj, named):
-    '''Return specific referents of an enumerate object.
-    '''
-    return _refs(obj, named, '__doc__')
-
-def _exc_refs(obj, named):
-    '''Return specific referents of an Exception object.
-    '''
-     # .message raises DeprecationWarning in Python 2.6
-    return _refs(obj, named, 'args', 'filename', 'lineno', 'msg', 'text')  # , 'message', 'mixed'
-
-def _file_refs(obj, named):
-    '''Return specific referents of a file object.
-    '''
-    return _refs(obj, named, 'mode', 'name')
-
-def _frame_refs(obj, named):
-    '''Return specific referents of a frame object.
-    '''
-    return _refs(obj, named, pref='f_')
-
-def _func_refs(obj, named):
-    '''Return specific referents of a function or lambda object.
-    '''
-    return _refs(obj, named, '__doc__', '__name__', '__code__',
-                             pref='func_', excl=('func_globals',))
-
-def _gen_refs(obj, named):
-    '''Return the referent(s) of a generator object.
-    '''
-     # only some gi_frame attrs
-    f = getattr(obj, 'gi_frame', None)
-    return _refs(f, named, 'f_locals', 'f_code')
-
-def _im_refs(obj, named):
-    '''Return specific referents of a method object.
-    '''
-    return _refs(obj, named, '__doc__', '__name__', '__code__', pref='im_')
-
-def _inst_refs(obj, named):
-    '''Return specific referents of a class instance.
-    '''
-    return _refs(obj, named, '__dict__', '__class__', slots='__slots__')
-
-def _iter_refs(obj, named):
-    '''Return the referent(s) of an iterator object.
-    '''
-    r = compat._getreferents(obj)  # special case
-    return _refs(r, named, itor=_nameof(obj) or 'iteref')
-
-def _module_refs(obj, named):
-    '''Return specific referents of a module object.
-    '''
-     # ignore this very module
-    if obj.__name__ == __name__:
-        return ()
-     # module is essentially a dict
-    return _dict_refs(obj.__dict__, named)
-
-def _prop_refs(obj, named):
-    '''Return specific referents of a property object.
-    '''
-    return _refs(obj, named, '__doc__', pref='f')
-
-def _seq_refs(obj, unused):  # named unused for PyChecker
-    '''Return specific referents of a frozen/set, list, tuple and xrange object.
-    '''
-    return obj  # XXX for r in obj: yield r
-
-def _stat_refs(obj, named):
-    '''Return referents of a os.stat object.
-    '''
-    return _refs(obj, named, pref='st_')
-
-def _statvfs_refs(obj, named):
-    '''Return referents of a os.statvfs object.
-    '''
-    return _refs(obj, named, pref='f_')
-
-def _tb_refs(obj, named):
-    '''Return specific referents of a traceback object.
-    '''
-    return _refs(obj, named, pref='tb_')
-
-def _type_refs(obj, named):
-    '''Return specific referents of a type object.
-    '''
-    return _refs(obj, named, '__dict__', '__doc__', '__mro__',
-                             '__name__', '__slots__', '__weakref__')
-
-def _weak_refs(obj, unused):  # named unused for PyChecker
-    '''Return weakly referent object.
-    '''
-    try:  # ignore 'key' of KeyedRef
-        return (obj(),)
-    except:  # XXX ReferenceError
-        return ()  #PYCHOK OK
-
-_all_refs = (None, _class_refs,   _co_refs,   _dict_refs,  _enum_refs,
-                   _exc_refs,     _file_refs, _frame_refs, _func_refs,
-                   _gen_refs,     _im_refs,   _inst_refs,  _iter_refs,
-                   _module_refs,  _prop_refs, _seq_refs,   _stat_refs,
-                   _statvfs_refs, _tb_refs,   _type_refs,  _weak_refs)
-
-
- # type-specific length functions
-
-def _len(obj):
-    '''Safe len().
-    '''
-    try:
-        return len(obj)
-    except TypeError:  # no len()
-        return 0
-
-def _len_array(obj):
-    '''Array length in bytes.
-    '''
-    return len(obj) * obj.itemsize
-
-def _len_bytearray(obj):
-    '''Bytearray size.
-    '''
-    return obj.__alloc__()
-
-def _len_code(obj):  # see .../Lib/test/test_sys.py
-    '''Length of code object (stack and variables only).
-    '''
-    return obj.co_stacksize +      obj.co_nlocals  \
-                            + _len(obj.co_freevars) \
-                            + _len(obj.co_cellvars) - 1
-
-def _len_dict(obj):
-    '''Dict length in items (estimate).
-    '''
-    n = len(obj)  # active items
-    if n < 6:  # ma_smalltable ...
-       n = 0  # ... in basicsize
-    else:  # at least one unused
-       n = _power2(n + 1)
-    return n
-
-def _len_frame(obj):
-    '''Length of a frame object.
-    '''
-    c = getattr(obj, 'f_code', None)
-    if c:
-       n = _len_code(c)
-    else:
-       n = 0
-    return n
-
-_digit2p2 =  1 << (sizes._sizeof_Cdigit << 3)
-_digitmax = _digit2p2 - 1  # == (2 * PyLong_MASK + 1)
-_digitlog =  1.0 / log(_digit2p2)
-
-def _len_int(obj):
-    '''Length of multi-precision int (aka long) in digits.
-    '''
-    if obj:
-        n, i = 1, abs(obj)
-        if i > _digitmax:
-             # no log(x[, base]) in Python 2.2
-            n += int(log(i) * _digitlog)
-    else:  # zero
-        n = 0
-    return n
-
-def _len_iter(obj):
-    '''Length (hint) of an iterator.
-    '''
-    n = getattr(obj, '__length_hint__', None)
-    if n:
-       n = n()
-    else:  # try len()
-       n = _len(obj)
-    return n
-
-def _len_list(obj):
-    '''Length of list (estimate).
-    '''
-    n = len(obj)
-     # estimate over-allocation
-    if n > 8:
-       n += 6 + (n >> 3)
-    elif n:
-       n += 4
-    return n
-
-def _len_module(obj):
-    '''Module length.
-    '''
-    return _len(obj.__dict__)  # _len(dir(obj))
-
-def _len_set(obj):
-    '''Length of frozen/set (estimate).
-    '''
-    n = len(obj)
-    if n > 8:  # assume half filled
-       n = _power2(n + n - 2)
-    elif n:  # at least 8
-       n = 8
-    return n
-
-def _len_slice(obj):
-    '''Slice length.
-    '''
-    try:
-        return ((obj.stop - obj.start + 1) // obj.step)
-    except (AttributeError, TypeError):
-        return 0
-
-def _len_slots(obj):
-    '''Slots length.
-    '''
-    return len(obj) - 1
-
-def _len_struct(obj):
-    '''Struct length in bytes.
-    '''
-    try:
-        return obj.size
-    except AttributeError:
-        return 0
-
-def _len_unicode(obj):
-    '''Unicode size.
-    '''
-    return len(obj) + 1
-
-_all_lengs = (None, _len,        _len_array,  _len_bytearray,
-                    _len_code,   _len_dict,   _len_frame,
-                    _len_int,    _len_iter,   _len_list,
-                    _len_module, _len_set,    _len_slice,
-                    _len_slots,  _len_struct, _len_unicode)
-
 
 # more private functions and classes
 
@@ -790,24 +455,6 @@ except AttributeError:  # Python 3.0
             k = _claskey(obj, _new_style)
         return k
 
-class _NamedRef(object):
-    '''Store referred object along
-       with the name of the referent.
-    '''
-    __slots__ = ('name', 'ref')
-
-    def __init__(self, name, ref):
-        self.name = name
-        self.ref  = ref
-
-class _Slots(tuple):
-    '''Wrapper class for __slots__ attribute at
-       class instances to account for the size
-       of the __slots__ tuple/list containing
-       references to the attribute values.
-    '''
-    pass
-
  # kinds of _Typedefs
 _i = compat._intern
 _all_kinds = (_kind_static, _kind_dynamic, _kind_derived, _kind_ignored, _kind_inferred) = (
@@ -820,7 +467,7 @@ class _Typedef(object):
     __slots__ = {
         'base': 0,     # basic size in bytes
         'item': 0,     # item size in bytes
-        'leng': None,  # or _len_...() function
+        'leng': None,  # or typeinfo._len_...() function
         'refs': None,  # or _..._refs() function
         'both': None,  # both data and code if True, code only if False
         'kind': None,  # _kind_... value
@@ -881,7 +528,7 @@ class _Typedef(object):
         if not self.both:
             c = ' (code only)'
         if self.leng:
-            n = ' (%s)' % _nameof(self.leng)
+            n = ' (%s)' % common._nameof(self.leng)
         return compat._kwds(base=self.base, item=self.item, leng=n,
                      code=c,         kind=self.kind)
 
@@ -905,7 +552,7 @@ class _Typedef(object):
                 else:
                     k = self.kind
                 _typedefs[c] = _Typedef(base=_basicsize(type(t), base=base, heap=heap),
-                                        refs=_type_refs,
+                                        refs=typeinfo._type_refs,
                                         both=False, kind=k, type=t)
         elif isbuiltin(t) and t not in _typedefs:  # array, range, xrange in Python 2.x
             _typedefs[t] = _Typedef(base=_basicsize(t, base=base),
@@ -921,7 +568,7 @@ class _Typedef(object):
             d.update(kwds)
             self.reset(**d)
         if safe_len and self.item:
-            self.leng = _len
+            self.leng = typeinfo._len
 
     def reset(self, base=0, item=0, leng=None, refs=None,
                                     both=True, kind=None, type=None):
@@ -935,11 +582,11 @@ class _Typedef(object):
             raise ValueError('invalid option: %s=%r' % ('item', item))
         else:
             self.item = item
-        if leng in _all_lengs:  # XXX or compat._callable(leng)
+        if leng in typeinfo._all_lengs:  # XXX or compat._callable(leng)
             self.leng = leng
         else:
             raise ValueError('invalid option: %s=%r' % ('leng', leng))
-        if refs in _all_refs:  # XXX or compat._callable(refs)
+        if refs in typeinfo._all_refs:  # XXX or compat._callable(refs)
             self.refs = refs
         else:
             raise ValueError('invalid option: %s=%r' % ('refs', refs))
@@ -976,24 +623,24 @@ def _typedef_code(t, base=0, refs=None, kind=_kind_static, heap=False):
  # static typedefs for data and code types
 _typedef_both(complex)
 _typedef_both(float)
-_typedef_both(list,     refs=_seq_refs, leng=_len_list, item=sizes._sizeof_Cvoidp)  # sizeof(PyObject*)
-_typedef_both(tuple,    refs=_seq_refs, leng=_len,      item=sizes._sizeof_Cvoidp)  # sizeof(PyObject*)
-_typedef_both(property, refs=_prop_refs)
+_typedef_both(list,     refs=typeinfo._seq_refs, leng=typeinfo._len_list, item=sizes._sizeof_Cvoidp)  # sizeof(PyObject*)
+_typedef_both(tuple,    refs=typeinfo._seq_refs, leng=typeinfo._len,      item=sizes._sizeof_Cvoidp)  # sizeof(PyObject*)
+_typedef_both(property, refs=typeinfo._prop_refs)
 _typedef_both(type(Ellipsis))
 _typedef_both(type(None))
 
  # _Slots is a special tuple, see _Slots.__doc__
-_typedef_both(_Slots, item=sizes._sizeof_Cvoidp,
-                      leng=_len_slots,  # length less one
+_typedef_both(common._Slots, item=sizes._sizeof_Cvoidp,
+                      leng=typeinfo._len_slots,  # length less one
                       refs=None,  # but no referents
                       heap=True)  # plus head
 
  # dict, dictproxy, dict_proxy and other dict-like types
-_dict_typedef = _typedef_both(dict,        item=sizes._sizeof_CPyDictEntry, leng=_len_dict, refs=_dict_refs)
+_dict_typedef = _typedef_both(dict,        item=sizes._sizeof_CPyDictEntry, leng=typeinfo._len_dict, refs=typeinfo._dict_refs)
 try:  # <type dictproxy> only in Python 2.x
-    _typedef_both(Types.DictProxyType,     item=sizes._sizeof_CPyDictEntry, leng=_len_dict, refs=_dict_refs)
+    _typedef_both(Types.DictProxyType,     item=sizes._sizeof_CPyDictEntry, leng=typeinfo._len_dict, refs=typeinfo._dict_refs)
 except AttributeError:  # XXX any class __dict__ is <type dict_proxy> in Python 3.0?
-    _typedef_both(type(_Typedef.__dict__), item=sizes._sizeof_CPyDictEntry, leng=_len_dict, refs=_dict_refs)
+    _typedef_both(type(_Typedef.__dict__), item=sizes._sizeof_CPyDictEntry, leng=typeinfo._len_dict, refs=typeinfo._dict_refs)
  # other dict-like classes and types may be derived or inferred,
  # provided the module and class name is listed here (see functions
  # adict, _isdictclass and _infer_dict for further details)
@@ -1002,14 +649,14 @@ _dict_classes = {'UserDict': ('IterableUserDict',  'UserDict'),
 try:  # <type module> is essentially a dict
     _typedef_both(Types.ModuleType, base=_dict_typedef.base,
                                     item=_dict_typedef.item + sizes._sizeof_CPyModuleObject,
-                                    leng=_len_module, refs=_module_refs)
+                                    leng=typeinfo._len_module, refs=typeinfo._module_refs)
 except AttributeError:  # missing
     pass
 
  # newer or obsolete types
 try:
     from array import array  # array type
-    _typedef_both(array, leng=_len_array, item=sizes._sizeof_Cbyte)
+    _typedef_both(array, leng=typeinfo._len_array, item=sizes._sizeof_Cbyte)
 except ImportError:  # missing
     pass
 
@@ -1025,47 +672,47 @@ except NameError:  # missing
 
 try:
     if isbuiltin(buffer):  # Python 2.2
-        _typedef_both(type(buffer('')), item=sizes._sizeof_Cbyte, leng=_len)  # XXX len in bytes?
+        _typedef_both(type(buffer('')), item=sizes._sizeof_Cbyte, leng=typeinfo._len)  # XXX len in bytes?
     else:
-        _typedef_both(buffer,           item=sizes._sizeof_Cbyte, leng=_len)  # XXX len in bytes?
+        _typedef_both(buffer,           item=sizes._sizeof_Cbyte, leng=typeinfo._len)  # XXX len in bytes?
 except NameError:  # missing
     pass
 
 try:
-    _typedef_both(bytearray, item=sizes._sizeof_Cbyte, leng=_len_bytearray)  #PYCHOK bytearray new in 2.6, 3.0
+    _typedef_both(bytearray, item=sizes._sizeof_Cbyte, leng=typeinfo._len_bytearray)  #PYCHOK bytearray new in 2.6, 3.0
 except NameError:  # missing
     pass
 try:
     if type(bytes) is not type(str):  # bytes is str in 2.6 #PYCHOK bytes new in 2.6, 3.0
-      _typedef_both(bytes, item=sizes._sizeof_Cbyte, leng=_len)  #PYCHOK bytes new in 2.6, 3.0
+      _typedef_both(bytes, item=sizes._sizeof_Cbyte, leng=typeinfo._len)  #PYCHOK bytes new in 2.6, 3.0
 except NameError:  # missing
     pass
 try:  # XXX like bytes
-    _typedef_both(str8, item=sizes._sizeof_Cbyte, leng=_len)  #PYCHOK str8 new in 2.6, 3.0
+    _typedef_both(str8, item=sizes._sizeof_Cbyte, leng=typeinfo._len)  #PYCHOK str8 new in 2.6, 3.0
 except NameError:  # missing
     pass
 
 try:
-    _typedef_both(enumerate, refs=_enum_refs)
+    _typedef_both(enumerate, refs=typeinfo._enum_refs)
 except NameError:  # missing
     pass
 
 try:  # Exception is type in Python 3.0
-    _typedef_both(Exception, refs=_exc_refs)
+    _typedef_both(Exception, refs=typeinfo._exc_refs)
 except:  # missing
     pass  #PYCHOK OK
 
 try:
-    _typedef_both(file, refs=_file_refs)
+    _typedef_both(file, refs=typeinfo._file_refs)
 except NameError:  # missing
     pass
 
 try:
-    _typedef_both(frozenset, item=sizes._sizeof_Csetentry, leng=_len_set, refs=_seq_refs)
+    _typedef_both(frozenset, item=sizes._sizeof_Csetentry, leng=typeinfo._len_set, refs=typeinfo._seq_refs)
 except NameError:  # missing
     pass
 try:
-    _typedef_both(set,       item=sizes._sizeof_Csetentry, leng=_len_set, refs=_seq_refs)
+    _typedef_both(set,       item=sizes._sizeof_Csetentry, leng=typeinfo._len_set, refs=typeinfo._seq_refs)
 except NameError:  # missing
     pass
 
@@ -1075,10 +722,10 @@ except AttributeError:  # missing
     pass
 
 try:  # if long exists, it is multi-precision ...
-    _typedef_both(long, item=sizes._sizeof_Cdigit, leng=_len_int)
+    _typedef_both(long, item=sizes._sizeof_Cdigit, leng=typeinfo._len_int)
     _typedef_both(int)  # ... and int is fixed size
 except NameError:  # no long, only multi-precision int in Python 3.0
-    _typedef_both(int,  item=sizes._sizeof_Cdigit, leng=_len_int)
+    _typedef_both(int,  item=sizes._sizeof_Cdigit, leng=typeinfo._len_int)
 
 try:  # not callable()
     _typedef_both(Types.MemberDescriptorType)
@@ -1100,42 +747,42 @@ except NameError:  # missing
     pass
 
 try:
-    _typedef_both(reversed, refs=_enum_refs)
+    _typedef_both(reversed, refs=typeinfo._enum_refs)
 except NameError:  # missing
     pass
 
 try:
-    _typedef_both(slice, item=sizes._sizeof_Cvoidp, leng=_len_slice)  # XXX worst-case itemsize?
+    _typedef_both(slice, item=sizes._sizeof_Cvoidp, leng=typeinfo._len_slice)  # XXX worst-case itemsize?
 except NameError:  # missing
     pass
 
 try:
     from os import curdir, stat, statvfs
-    _typedef_both(type(stat(   curdir)), refs=_stat_refs)     # stat_result
-    _typedef_both(type(statvfs(curdir)), refs=_statvfs_refs,  # statvfs_result
-                                         item=sizes._sizeof_Cvoidp, leng=_len)
+    _typedef_both(type(stat(   curdir)), refs=typeinfo._stat_refs)     # stat_result
+    _typedef_both(type(statvfs(curdir)), refs=typeinfo._statvfs_refs,  # statvfs_result
+                                         item=sizes._sizeof_Cvoidp, leng=typeinfo._len)
 except ImportError:  # missing
     pass
 
 try:
     from struct import Struct  # only in Python 2.5 and 3.0
-    _typedef_both(Struct, item=sizes._sizeof_Cbyte, leng=_len_struct)  # len in bytes
+    _typedef_both(Struct, item=sizes._sizeof_Cbyte, leng=typeinfo._len_struct)  # len in bytes
 except ImportError:  # missing
     pass
 
 try:
-    _typedef_both(Types.TracebackType, refs=_tb_refs)
+    _typedef_both(Types.TracebackType, refs=typeinfo._tb_refs)
 except AttributeError:  # missing
     pass
 
 try:
-    _typedef_both(unicode, leng=_len_unicode, item=sizes._sizeof_Cunicode)
-    _typedef_both(str,     leng=_len,         item=sizes._sizeof_Cbyte)  # 1-byte char
+    _typedef_both(unicode, leng=typeinfo._len_unicode, item=sizes._sizeof_Cunicode)
+    _typedef_both(str,     leng=typeinfo._len,         item=sizes._sizeof_Cbyte)  # 1-byte char
 except NameError:  # str is unicode
-    _typedef_both(str,     leng=_len_unicode, item=sizes._sizeof_Cunicode)
+    _typedef_both(str,     leng=typeinfo._len_unicode, item=sizes._sizeof_Cunicode)
 
 try:  # <type 'KeyedRef'>
-    _typedef_both(Weakref.KeyedRef, refs=_weak_refs, heap=True)  # plus head
+    _typedef_both(Weakref.KeyedRef, refs=typeinfo._weak_refs, heap=True)  # plus head
 except AttributeError:  # missing
     pass
 
@@ -1145,7 +792,7 @@ except AttributeError:  # missing
     pass
 
 try:  # <type 'weakref'>
-    _typedef_both(Weakref.ReferenceType, refs=_weak_refs)
+    _typedef_both(Weakref.ReferenceType, refs=typeinfo._weak_refs)
 except AttributeError:  # missing
     pass
 
@@ -1155,25 +802,25 @@ _typedef_code(super,      kind=_kind_ignored)
 _typedef_code(_Type_type, kind=_kind_ignored)
 
 try:
-    _typedef_code(classmethod, refs=_im_refs)
+    _typedef_code(classmethod, refs=typeinfo._im_refs)
 except NameError:
     pass
 try:
-    _typedef_code(staticmethod, refs=_im_refs)
+    _typedef_code(staticmethod, refs=typeinfo._im_refs)
 except NameError:
     pass
 try:
-    _typedef_code(Types.MethodType, refs=_im_refs)
+    _typedef_code(Types.MethodType, refs=typeinfo._im_refs)
 except NameError:
     pass
 
 try:  # generator, code only, no len(), not callable()
-    _typedef_code(Types.GeneratorType, refs=_gen_refs)
+    _typedef_code(Types.GeneratorType, refs=typeinfo._gen_refs)
 except AttributeError:  # missing
     pass
 
 try:  # <type 'weakcallableproxy'>
-    _typedef_code(Weakref.CallableProxyType, refs=_weak_refs)
+    _typedef_code(Weakref.CallableProxyType, refs=typeinfo._weak_refs)
 except AttributeError:  # missing
     pass
 
@@ -1201,7 +848,7 @@ for t in compat._values(_typedefs):
 for t in s:
     try:
         i = iter(t)
-        _typedef_both(type(i), leng=_len_iter, refs=_iter_refs, item=0)  # no itemsize!
+        _typedef_both(type(i), leng=typeinfo._len_iter, refs=typeinfo._iter_refs, item=0)  # no itemsize!
     except (KeyError, TypeError):  # ignore non-iterables, duplicates, etc.
         pass
 del i, s, t
@@ -1213,25 +860,25 @@ def _typedef(obj, derive=False, infer=False):
     t =  type(obj)
     v = _Typedef(base=_basicsize(t, obj=obj),
                  kind=_kind_dynamic, type=t)
-  ##_printf('new %r %r/%r %s', t, _basicsize(t), _itemsize(t), _repr(dir(obj)))
+  ##_printf('new %r %r/%r %s', t, _basicsize(t), _itemsize(t), common._repr(dir(obj)))
     if ismodule(obj):  # handle module like dict
         v.dup(item=_dict_typedef.item + sizes._sizeof_CPyModuleObject,
-              leng=_len_module,
-              refs=_module_refs)
+              leng=typeinfo._len_module,
+              refs=typeinfo._module_refs)
     elif isframe(obj):
         v.set(base=_basicsize(t, base=sizes._sizeof_CPyFrameObject, obj=obj),
               item=_itemsize(t),
-              leng=_len_frame,
-              refs=_frame_refs)
+              leng=typeinfo._len_frame,
+              refs=typeinfo._frame_refs)
     elif iscode(obj):
         v.set(base=_basicsize(t, base=sizes._sizeof_CPyCodeObject, obj=obj),
               item=sizes._sizeof_Cvoidp,
-              leng=_len_code,
-              refs=_co_refs,
+              leng=typeinfo._len_code,
+              refs=typeinfo._co_refs,
               both=False)  # code only
     elif compat._callable(obj):
         if isclass(obj):  # class or type
-            v.set(refs=_class_refs,
+            v.set(refs=typeinfo._class_refs,
                   both=False)  # code only
             if obj.__module__ in _builtin_modules:
                 v.set(kind=_kind_ignored)
@@ -1239,15 +886,15 @@ def _typedef(obj, derive=False, infer=False):
             v.set(both=False,  # code only
                   kind=_kind_ignored)
         elif isfunction(obj):
-            v.set(refs=_func_refs,
+            v.set(refs=typeinfo._func_refs,
                   both=False)  # code only
         elif ismethod(obj):
-            v.set(refs=_im_refs,
+            v.set(refs=typeinfo._im_refs,
                   both=False)  # code only
         elif isclass(t):  # callable instance, e.g. SCons,
              # handle like any other instance further below
             v.set(item=_itemsize(t), safe_len=True,
-                  refs=_inst_refs)  # not code only!
+                  refs=typeinfo._inst_refs)  # not code only!
         else:
             v.set(both=False)  # code only
     elif _issubclass(t, dict):
@@ -1264,14 +911,14 @@ def _typedef(obj, derive=False, infer=False):
                 return v
         if _issubclass(t, Exception):
             v.set(item=_itemsize(t), safe_len=True,
-                  refs=_exc_refs,
+                  refs=typeinfo._exc_refs,
                   kind=_kind_derived)
         elif isinstance(obj, Exception):
             v.set(item=_itemsize(t), safe_len=True,
-                  refs=_exc_refs)
+                  refs=typeinfo._exc_refs)
         else:
             v.set(item=_itemsize(t), safe_len=True,
-                  refs=_inst_refs)
+                  refs=typeinfo._inst_refs)
     return v
 
 
@@ -1312,7 +959,7 @@ class _Prof(object):
         if grand:
             t += ' (%s)' % _p100(self.total, grand, prec=0)
         return compat._kwds(avg=_SI2(a),         high=_SI2(self.high),
-                     lengstr=_lengstr(o), obj=_repr(o, clip=clip),
+                     lengstr=_lengstr(o), obj=common._repr(o, clip=clip),
                      plural=p,            total=t)
 
     def update(self, obj, size):
@@ -1400,7 +1047,7 @@ class Asizer(object):
     def _nameof(self, obj):
         '''Return the object's name.
         '''
-        return _nameof(obj, '') or self._repr(obj)
+        return common._nameof(obj, '') or self._repr(obj)
 
     def _prepr(self, obj):
         '''Like **prepr()**.
@@ -1418,7 +1065,7 @@ class Asizer(object):
     def _repr(self, obj):
         '''Like ``repr()``.
         '''
-        return _repr(obj, clip=self._clip_)
+        return common._repr(obj, clip=self._clip_)
 
     def _sizer(self, obj, deep, sized):
         '''Size an object, recursively.
@@ -1454,7 +1101,7 @@ class Asizer(object):
                         if sized and deep < self._detail_:
                              # use named referents
                             for o in r(obj, True):
-                                if isinstance(o, _NamedRef):
+                                if isinstance(o, common._NamedRef):
                                     t = z(o.ref, d, sized)
                                     t.name = o.name
                                 else:
@@ -2071,7 +1718,7 @@ def test_flatsize(failf=None, stdf=None):
                   [1,2,3,4,5,6,7,8], ['1', '2', '3'], [0] * 100,
                   '12345678', 'x' * 1001,
                   (1,2,3,4,5,6,7,8), ('1', '2', '3'), (0,) * 100,
-                  _Slots((1,2,3,4,5,6,7,8)), _Slots(('1', '2', '3')), _Slots((0,) * 100),
+                  common._Slots((1,2,3,4,5,6,7,8)), common._Slots(('1', '2', '3')), common._Slots((0,) * 100),
                   0, 1 << 8, 1 << 16, 1 << 32, 1 << 64, 1 << 128,
                   complex(0, 1), True, False))
         compat._getsizeof = None  # zap compat._getsizeof for flatsize()
@@ -2089,10 +1736,10 @@ def test_flatsize(failf=None, stdf=None):
                     e += 1
                     if failf:  # report failure
                        failf('%s vs %s for %s: %s',
-                              a, s, _nameof(type(o)), _repr(o))
+                              a, s, common._nameof(type(o)), common._repr(o))
                 if stdf:
                    _printf('flatsize() %s vs sys.getsizeof() %s for %s: %s%s',
-                            a, s, _nameof(type(o)), _repr(o), x, file=stdf)
+                            a, s, common._nameof(type(o)), common._repr(o), x, file=stdf)
         compat._getsizeof = g  # restore
     return len(t), e
 
@@ -2102,7 +1749,7 @@ if __name__ == '__main__':
     argv, MAX = sys.argv, sys.getrecursionlimit()
 
     def _print_asizeof(obj, infer=False, stats=0):
-        a = [_repr(obj),]
+        a = [common._repr(obj),]
         for d, c in ((0, False), (MAX, False), (MAX, True)):
             a.append(asizeof(obj, limit=d, code=c, infer=infer, stats=stats))
         _printf(" asizeof(%s) is %d, %d, %d", *a)
@@ -2114,7 +1761,7 @@ if __name__ == '__main__':
         _printf('%s(): %s', ' basicsize', basicsize(obj))
         _printf('%s(): %s', ' itemsize',  itemsize(obj))
         _printf('%s(): %r', ' leng',      leng(obj))
-        _printf('%s(): %s', ' refs',     _repr(refs(obj)))
+        _printf('%s(): %s', ' refs',     common._repr(refs(obj)))
         _printf('%s(): %s', ' flatsize',  flatsize(obj, align=align))  # , code=code
         _printf('%s(): %s', ' asized',           asized(obj, align=align, detail=detail, code=code, limit=limit))
       ##_printf('%s(): %s', '.asized',   _asizer.asized(obj, align=align, detail=detail, code=code, limit=limit))
@@ -2167,7 +1814,7 @@ if __name__ == '__main__':
             else:
                 o = __import__(m)
             s = asizeof(o, **opts)
-            _printf("%sasizeof(%s) is %d", linesep, _repr(o, opts['clip']), s)
+            _printf("%sasizeof(%s) is %d", linesep, common._repr(o, opts['clip']), s)
             _print_functions(o, **opts)
         argv = []
 
@@ -2261,8 +1908,8 @@ if __name__ == '__main__':
         _printf('%sasizeof(%s) for (limit, code) in %s ... %s', linesep, '<callable>', '((0, False), (MAX, False), (MAX, True))', '-code')
         for o in (C, D, E, P, S, T,  # classes are callable
                   type,
-                 _co_refs, _dict_refs, _inst_refs, _len_int, _seq_refs, lambda x: x,
-                (_co_refs, _dict_refs, _inst_refs, _len_int, _seq_refs),
+                 typeinfo._co_refs, typeinfo._dict_refs, typeinfo._inst_refs, typeinfo._len_int, typeinfo._seq_refs, lambda x: x,
+                (typeinfo._co_refs, typeinfo._dict_refs, typeinfo._inst_refs, typeinfo._len_int, typeinfo._seq_refs),
                  _typedefs):
             _print_asizeof(o)
 
@@ -2327,7 +1974,7 @@ if __name__ == '__main__':
         for o in (1024, 1000000000,
                   1.0, 1.0e100, 1024, 1000000000,
                   MAX, 1 << 32, _L5d, -_L5d, _L17d, -_L17d):
-            _printf(" asizeof(%s) is %s (%s + %s * %s)", _repr(o), asizeof(o, align=0, limit=0),
+            _printf(" asizeof(%s) is %s (%s + %s * %s)", common._repr(o), asizeof(o, align=0, limit=0),
                                                          basicsize(o), leng(o), itemsize(o))
 
     if _opts('-iter', '-iterator'):  # iterator examples
