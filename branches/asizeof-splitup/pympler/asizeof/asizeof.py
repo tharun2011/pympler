@@ -167,6 +167,7 @@ import sys
 import types    as     Types
 import weakref  as     Weakref
 
+import compat
 import sizes
 
 __version__ = '5.10 (Dec 04, 2008)'
@@ -186,74 +187,6 @@ _Py_TPFLAGS_HEAPTYPE = 1 <<  9  # Py_TPFLAGS_HEAPTYPE
 _Py_TPFLAGS_HAVE_GC  = 1 << 14  # Py_TPFLAGS_HAVE_GC
 
 _Type_type = type(type)  # == type and new-style class type
-
-
- # compatibility functions for more uniform
- # behavior across Python version 2.2 thu 3.0
-
-def _items(obj):  # dict only
-    '''Return iter-/generator, preferably.
-    '''
-    return getattr(obj, 'iteritems', obj.items)()
-
-def _keys(obj):  # dict only
-    '''Return iter-/generator, preferably.
-    '''
-    return getattr(obj, 'iterkeys', obj.keys)()
-
-def _values(obj):  # dict only
-    '''Use iter-/generator, preferably.
-    '''
-    return getattr(obj, 'itervalues', obj.values)()
-
-try:  # callable() builtin
-    _callable = callable
-except NameError:  # callable() removed in Python 3.0
-    def _callable(obj):
-        '''Substitute for callable().'''
-        return hasattr(obj, '__call__')
-
-try:  # only used to get the referents of
-      # iterators, but gc.get_referents()
-      # returns () for dict...-iterators
-    from gc import get_referents as _getreferents
-except ImportError:
-    def _getreferents(unused):
-        return ()  # sorry, no refs
-
- # sys.getsizeof() new in Python 2.6
-_getsizeof = getattr(sys, 'getsizeof', None)
-
-try:  # str intern()
-    _intern = intern
-except NameError:  # no intern() in Python 3.0
-    def _intern(val):
-        return val
-
-def _kwds(**kwds):  # no dict(key=value, ...) in Python 2.2
-    '''Return name=value pairs as keywords dict.
-    '''
-    return kwds
-
-try:  # sorted() builtin
-    _sorted = sorted
-except NameError:  # no sorted() in Python 2.2
-    def _sorted(vals, reverse=False):
-        '''Partial substitute for missing sorted().'''
-        vals.sort()
-        if reverse:
-            vals.reverse()
-        return vals
-
-try:  # sum() builtin
-    _sum = sum
-except NameError:  # no sum() in Python 2.2
-    def _sum(vals):
-        '''Partial substitute for missing sum().'''
-        s = 0
-        for v in vals:
-            s += v
-        return s
 
 
  # private functions
@@ -278,7 +211,7 @@ def _basicsize(t, base=0, heap=False, obj=None):
 def _derive_typedef(typ):
     '''Return single, existing super type typedef or None.
     '''
-    v = [v for v in _values(_typedefs) if _issubclass(typ, v.type)]
+    v = [v for v in compat._values(_typedefs) if _issubclass(typ, v.type)]
     if len(v) == 1:
         return v[0]
     return None
@@ -302,8 +235,8 @@ def _dir2(obj, pref='', excl=(), slots=None, itor=''):
                         s.setdefault(a, getattr(obj, a))
              # assume __slots__ tuple/list
              # is holding the attr values
-            yield slots, _Slots(s)  # _keys(s)
-            for t in _items(s):
+            yield slots, _Slots(s)  # compat._keys(s)
+            for t in compat._items(s):
                 yield t  # attr name, value
     elif itor:  # iterator referents
         for o in obj:  # iter(obj)
@@ -319,7 +252,7 @@ def _infer_dict(obj):
     for ats in (('__len__', 'get', 'has_key',     'items',     'keys',     'values'),
                 ('__len__', 'get', 'has_key', 'iteritems', 'iterkeys', 'itervalues')):
         for a in ats:  # no all(<generator_expression>) in Python 2.2
-            if not _callable(getattr(obj, a, None)):
+            if not compat._callable(getattr(obj, a, None)):
                 break
         else:  # all True
             return True
@@ -350,7 +283,7 @@ def _itemsize(t, item=0):
 def _kwdstr(**kwds):
     '''Keyword arguments as a string.
     '''
-    return ', '.join(_sorted(['%s=%r' % kv for kv in _items(kwds)]))  # [] for Python 2.2
+    return ', '.join(compat._sorted(['%s=%r' % kv for kv in compat._items(kwds)]))  # [] for Python 2.2
 
 def _lengstr(obj):
     '''Object length as a string.
@@ -380,7 +313,7 @@ def _objs_opts(objs, all=None, **opts):
     elif all is True:  # 'all' objects ...
          # ... modules first, globals and stack
          # (may contain duplicate objects)
-        t = tuple(_values(sys.modules)) + (
+        t = tuple(compat._values(sys.modules)) + (
             globals(), stack(sys.getrecursionlimit()))
     else:
         raise ValueError('invalid option: %s=%r' % ('all', all))
@@ -496,12 +429,12 @@ def _dict_refs(obj, named):
     '''Return key and value objects of a dict/proxy.
     '''
     if named:
-        for k, v in _items(obj):
+        for k, v in compat._items(obj):
             s = str(k)
             yield _NamedRef('[K] ' + s, k)
             yield _NamedRef('[V] ' + s + ': ' + _repr(v), v)
     else:
-        for k, v in _items(obj):
+        for k, v in compat._items(obj):
             yield k
             yield v
 
@@ -552,7 +485,7 @@ def _inst_refs(obj, named):
 def _iter_refs(obj, named):
     '''Return the referent(s) of an iterator object.
     '''
-    r = _getreferents(obj)  # special case
+    r = compat._getreferents(obj)  # special case
     return _refs(r, named, itor=_nameof(obj) or 'iteref')
 
 def _module_refs(obj, named):
@@ -876,7 +809,7 @@ class _Slots(tuple):
     pass
 
  # kinds of _Typedefs
-_i = _intern
+_i = compat._intern
 _all_kinds = (_kind_static, _kind_dynamic, _kind_derived, _kind_ignored, _kind_inferred) = (
                 _i('static'), _i('dynamic'), _i('derived'), _i('ignored'), _i('inferred'))
 del _i
@@ -935,8 +868,8 @@ class _Typedef(object):
         s = self.base
         if self.leng and self.item > 0:  # include items
             s += self.leng(obj) * self.item
-        if _getsizeof:  # _getsizeof prevails
-            s = _getsizeof(obj, s)
+        if compat._getsizeof:  # _getsizeof prevails
+            s = compat._getsizeof(obj, s)
         if mask:  # align
             s = (s + mask) & ~mask
         return s
@@ -949,14 +882,14 @@ class _Typedef(object):
             c = ' (code only)'
         if self.leng:
             n = ' (%s)' % _nameof(self.leng)
-        return _kwds(base=self.base, item=self.item, leng=n,
+        return compat._kwds(base=self.base, item=self.item, leng=n,
                      code=c,         kind=self.kind)
 
     def kwds(self):
         '''Return all attributes as keywords dict.
         '''
          # no dict(refs=self.refs, ..., kind=self.kind) in Python 2.0
-        return _kwds(base=self.base, item=self.item,
+        return compat._kwds(base=self.base, item=self.item,
                      leng=self.leng, refs=self.refs,
                      both=self.both, kind=self.kind, type=self.type)
 
@@ -1002,11 +935,11 @@ class _Typedef(object):
             raise ValueError('invalid option: %s=%r' % ('item', item))
         else:
             self.item = item
-        if leng in _all_lengs:  # XXX or _callable(leng)
+        if leng in _all_lengs:  # XXX or compat._callable(leng)
             self.leng = leng
         else:
             raise ValueError('invalid option: %s=%r' % ('leng', leng))
-        if refs in _all_refs:  # XXX or _callable(refs)
+        if refs in _all_refs:  # XXX or compat._callable(refs)
             self.refs = refs
         else:
             raise ValueError('invalid option: %s=%r' % ('refs', refs))
@@ -1245,7 +1178,7 @@ except AttributeError:  # missing
     pass
 
  # any type-specific iterators
-s = [_items({}), _keys({}), _values({})]
+s = [compat._items({}), compat._keys({}), compat._values({})]
 try:  # reversed list and tuples iterators
     s.extend([reversed([]), reversed(())])
 except NameError:  # missing
@@ -1259,7 +1192,7 @@ try:  # callable-iterator
     s.append(finditer('', ''))
 except ImportError:  # missing
     pass
-for t in _values(_typedefs):
+for t in compat._values(_typedefs):
     if t.type and t.leng:
         try:  # create an (empty) instance
             s.append(t.type())
@@ -1296,7 +1229,7 @@ def _typedef(obj, derive=False, infer=False):
               leng=_len_code,
               refs=_co_refs,
               both=False)  # code only
-    elif _callable(obj):
+    elif compat._callable(obj):
         if isclass(obj):  # class or type
             v.set(refs=_class_refs,
                   both=False)  # code only
@@ -1378,7 +1311,7 @@ class _Prof(object):
         t = _SI2(self.total)
         if grand:
             t += ' (%s)' % _p100(self.total, grand, prec=0)
-        return _kwds(avg=_SI2(a),         high=_SI2(self.high),
+        return compat._kwds(avg=_SI2(a),         high=_SI2(self.high),
                      lengstr=_lengstr(o), obj=_repr(o, clip=clip),
                      plural=p,            total=t)
 
@@ -1461,7 +1394,7 @@ class Asizer(object):
         self._profs     = {}
         self._seen      = {}
         self._total     = 0   # total size
-        for k in _keys(self._excl_d):
+        for k in compat._keys(self._excl_d):
             self._excl_d[k] = 0
 
     def _nameof(self, obj):
@@ -1558,9 +1491,9 @@ class Asizer(object):
                 s[i] = self._sizer(o, 0, sized)
             t.append(s[i])
         if sized:
-            s = _sum([i.size for i in _values(s)])  # [] for Python 2.2
+            s = compat._sum([i.size for i in compat._values(s)])  # [] for Python 2.2
         else:
-            s = _sum(_values(s))
+            s = compat._sum(compat._values(s))
         self._total += s  # accumulate
         return s, tuple(t)
 
@@ -1629,9 +1562,9 @@ class Asizer(object):
                *print3options* -- print options, ala Python 3.0
         '''
          # get the profiles with non-zero size or count
-        t = [(v, k) for k, v in _items(self._profs) if v.total > 0 or v.number > 1]
+        t = [(v, k) for k, v in compat._items(self._profs) if v.total > 0 or v.number > 1]
         if (len(self._profs) - len(t)) < 9:  # just show all
-            t = [(v, k) for k, v in _items(self._profs)]
+            t = [(v, k) for k, v in compat._items(self._profs)]
         if t:
             s = ''
             if self._total:
@@ -1643,7 +1576,7 @@ class Asizer(object):
             _printf('%s%*d profile%s:  total%s, average, and largest flat size%s:  largest object',
                      linesep, w, len(t), _plural(len(t)), s, self._incl, **print3opts)
             r = len(t)
-            for v, k in _sorted(t, reverse=True):
+            for v, k in compat._sorted(t, reverse=True):
                 s = 'object%(plural)s:  %(total)s, %(avg)s, %(high)s:  %(obj)s%(lengstr)s' % v.format(self._clip_, self._total)
                 _printf('%*d %s %s', w, v.number, self._prepr(k), s, **print3opts)
                 r -= 1
@@ -1674,7 +1607,7 @@ class Asizer(object):
         '''
         s = min(opts.get('stats', stats) or 0, self._stats_)
         if s > 0:  # print stats
-            t = self._total + self._missed + _sum(_values(self._seen))
+            t = self._total + self._missed + compat._sum(compat._values(self._seen))
             w = len(str(t)) + 1
             t = c = ''
             o = _kwdstr(**opts)
@@ -1724,12 +1657,12 @@ class Asizer(object):
             if d:
                 d = ', %d duplicate' % self._duplicate
             _printf('%*d object%s given%s', w, n, _plural(n), d, **print3opts)
-        t = _sum([1 for t in _values(self._seen) if t != 0])  # [] for Python 2.2
+        t = compat._sum([1 for t in compat._values(self._seen) if t != 0])  # [] for Python 2.2
         _printf('%*d object%s sized', w, t, _plural(t), **print3opts)
         if self._excl_d:
-            t = _sum(_values(self._excl_d))
+            t = compat._sum(compat._values(self._excl_d))
             _printf('%*d object%s excluded', w, t, _plural(t), **print3opts)
-        t = _sum(_values(self._seen))
+        t = compat._sum(compat._values(self._seen))
         _printf('%*d object%s seen', w, t, _plural(t), **print3opts)
         if self._missed > 0:
             _printf('%*d object%s missed', w, self._missed, _plural(self._missed), **print3opts)
@@ -1745,17 +1678,17 @@ class Asizer(object):
         '''
         for k in _all_kinds:
              # XXX Python 3.0 doesn't sort type objects
-            t = [(self._prepr(a), v) for a, v in _items(_typedefs) if v.kind == k and (v.both or self._code_)]
+            t = [(self._prepr(a), v) for a, v in compat._items(_typedefs) if v.kind == k and (v.both or self._code_)]
             if t:
                 _printf('%s%*d %s type%s:  basicsize, itemsize, _len_(), _refs()',
                          linesep, w, len(t), k, _plural(len(t)), **print3opts)
-                for a, v in _sorted(t):
+                for a, v in compat._sorted(t):
                     _printf('%*s %s:  %s', w, '', a, v, **print3opts)
          # dict and dict-like classes
-        t = _sum([len(v) for v in _values(_dict_classes)])  # [] for Python 2.2
+        t = compat._sum([len(v) for v in compat._values(_dict_classes)])  # [] for Python 2.2
         if t:
             _printf('%s%*d dict/-like classes:', linesep, w, t, **print3opts)
-            for m, v in _items(_dict_classes):
+            for m, v in compat._items(_dict_classes):
                 _printf('%*s %s:  %s', w, '', m, self._prepr(v), **print3opts)
 
     def set(self, align=None, code=None, detail=None, limit=None, stats=None):
@@ -2095,7 +2028,7 @@ def leng(obj, **opts):
     v = _typedefof(obj, **opts)
     if v:
         v = v.leng
-        if v and _callable(v):
+        if v and compat._callable(v):
             v = v(obj)
     return v
 
@@ -2109,7 +2042,7 @@ def refs(obj, **opts):
     v = _typedefof(obj, **opts)
     if v:
         v = v.refs
-        if v and _callable(v):
+        if v and compat._callable(v):
             v = v(obj, False)
     return v
 
@@ -2125,10 +2058,9 @@ def test_flatsize(failf=None, stdf=None):
        builds without ``sys.getsizeof()``, it does provide some evidence that
        function **flatsize()** produces reasonable and usable results.
     '''
-    global _getsizeof
-    t, g, e = [], _getsizeof, 0
+    t, g, e = [], compat._getsizeof, 0
     if g:
-        for v in _values(_typedefs):
+        for v in compat._values(_typedefs):
             t.append(v.type)
             try:  # creating one instance
                 if v.type.__module__ not in ('io',):  # avoid 3.0 RuntimeWarning
@@ -2142,7 +2074,7 @@ def test_flatsize(failf=None, stdf=None):
                   _Slots((1,2,3,4,5,6,7,8)), _Slots(('1', '2', '3')), _Slots((0,) * 100),
                   0, 1 << 8, 1 << 16, 1 << 32, 1 << 64, 1 << 128,
                   complex(0, 1), True, False))
-        _getsizeof = None  # zap _getsizeof for flatsize()
+        compat._getsizeof = None  # zap compat._getsizeof for flatsize()
         for o in t:
             a = flatsize(o)
             s = sys.getsizeof(o, 0)  # 0 as default #PYCHOK expected
@@ -2161,7 +2093,7 @@ def test_flatsize(failf=None, stdf=None):
                 if stdf:
                    _printf('flatsize() %s vs sys.getsizeof() %s for %s: %s%s',
                             a, s, _nameof(type(o)), _repr(o), x, file=stdf)
-        _getsizeof = g  # restore
+        compat._getsizeof = g  # restore
     return len(t), e
 
 
@@ -2261,8 +2193,8 @@ if __name__ == '__main__':
              '-test':              'test flatsize() vs sys.getsizeof()',
              '-type[def]s':        'type definitions',
              '- | --':             'all examples'}
-        w = -max([len(o) for o in _keys(d)])  # [] for Python 2.2
-        t = _sorted(['%*s -- %s' % (w, o, t) for o, t in _items(d)])  # [] for Python 2.2
+        w = -max([len(o) for o in compat._keys(d)])  # [] for Python 2.2
+        t = compat._sorted(['%*s -- %s' % (w, o, t) for o, t in compat._items(d)])  # [] for Python 2.2
         t = '\n     '.join([''] + t)
         _printf('usage: %s <option> ...\n%s\n', argv[0], t)
 
@@ -2310,7 +2242,7 @@ if __name__ == '__main__':
     if _opts('-C'):  # show all Csizeof values
         t = [t for t in sizes.__dict__.items() if t[0].startswith('_sizeof_')]
         _printf('%s%d C sizes: (bytes) ... -C', linesep, len(t))
-        for n, v in _sorted(t):
+        for n, v in compat._sorted(t):
             _printf(' sizeof(%s): %r', n[len('_sizeof_'):], v)
 
     if _opts('-class'):  # class and instance examples
@@ -2403,9 +2335,9 @@ if __name__ == '__main__':
         o = iter('0123456789')
         e = iter('')
         d = iter({})
-        i = iter(_items({1:1}))
-        k = iter(_keys({2:2, 3:3}))
-        v = iter(_values({4:4, 5:5, 6:6}))
+        i = iter(compat._items({1:1}))
+        k = iter(compat._keys({2:2, 3:3}))
+        v = iter(compat._values({4:4, 5:5, 6:6}))
         l = iter([])
         t = iter(())
         asizesof(o, e, d, i, k, v, l, t, limit=0, code=False, stats=1)
@@ -2483,7 +2415,7 @@ if __name__ == '__main__':
         t = len(_typedefs)
         w = len(str(t)) * ' '
         _printf('%s%d type definitions: basic- and itemsize (leng), kind ... %s', linesep, t, '-type[def]s')
-        for k, v in _sorted([(_prepr(k), v) for k, v in _items(_typedefs)]):  # [] for Python 2.2
+        for k, v in compat._sorted([(_prepr(k), v) for k, v in compat._items(_typedefs)]):  # [] for Python 2.2
             s = '%(base)s and %(item)s%(leng)s, %(kind)s%(code)s' % v.format()
             _printf('%s %s: %s', w, k, s)
 
@@ -2492,7 +2424,7 @@ if __name__ == '__main__':
         n, e = test_flatsize(stdf=sys.stdout)
         if e:
             _printf('%s%d of %d tests failed or %s', linesep, e, n, _p100(e, n))
-        elif _getsizeof:
+        elif compat._getsizeof:
             _printf('no unexpected failures in %d tests', n)
         else:
             _printf('no sys.%s() in this python %s', 'getsizeof', sys.version.split()[0])
