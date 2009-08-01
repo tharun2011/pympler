@@ -76,3 +76,19 @@ def _repr(obj, clip=80):
         if h > 0:
             r = r[:h] + '....' + r[-h:]
     return r
+
+
+def _printf(fmt, *args, **print3opts):
+    '''Formatted print.
+    '''
+    if print3opts:  # like Python 3.0
+        f = print3opts.get('file', None) or sys.stdout
+        if args:
+            f.write(fmt % args)
+        else:
+            f.write(fmt)
+        f.write(print3opts.get('end', linesep))
+    elif args:
+        print(fmt % args)
+    else:
+        print(fmt)
