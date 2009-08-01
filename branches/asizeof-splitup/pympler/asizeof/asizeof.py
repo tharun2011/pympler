@@ -132,7 +132,7 @@ sizes of Python objects (for Python 2.2 or later [#test]_).
    In addition, many ``__...__`` attributes of callable objects are
    ignored [#arb]_, except crucial ones, e.g. class attributes ``__dict__``,
    ``__doc__``, ``__name__`` and ``__slots__``.  For more details, see the
-   type-specific ``typeinfo._..._refs()`` and ``typeinfo._len_...()`` functions below.
+   type-specific ``type_spec._..._refs()`` and ``type_spec._len_...()`` functions below.
 
 .. rubric:: Footnotes
 .. [#unsafe] The functions and classes in this module are not thread-safe.
@@ -170,87 +170,18 @@ import weakref  as     Weakref
 import common
 import compat
 import sizes
-import typeinfo
+import type_common
+import type_repo
+import type_spec
 
 __version__ = '5.10 (Dec 04, 2008)'
 __all__     = ['adict', 'asized', 'asizeof', 'asizesof',
                'Asized', 'Asizer',  # classes
                'basicsize', 'flatsize', 'itemsize', 'leng', 'refs']
 
- # any classes or types in modules listed in _builtin_modules are
- # considered built-in and ignored by default, as built-in functions
-if __name__ == '__main__':
-    _builtin_modules = (int.__module__, 'types', Exception.__module__)  # , 'weakref'
-else:  # treat this very module as built-in
-    _builtin_modules = (int.__module__, 'types', Exception.__module__, __name__)  # , 'weakref'
-
- # some flags from .../Include/object.h
-_Py_TPFLAGS_HEAPTYPE = 1 <<  9  # Py_TPFLAGS_HEAPTYPE
-_Py_TPFLAGS_HAVE_GC  = 1 << 14  # Py_TPFLAGS_HAVE_GC
-
-_Type_type = type(type)  # == type and new-style class type
 
 
  # private functions
-
-def _basicsize(t, base=0, heap=False, obj=None):
-    '''Get non-zero basicsize of type,
-       including the header sizes.
-    '''
-    s = max(getattr(t, '__basicsize__', 0), base)
-     # include gc header size
-    if t != _Type_type:
-       h = getattr(t,   '__flags__', 0) & _Py_TPFLAGS_HAVE_GC
-    elif heap:  # type, allocated on heap
-       h = True
-    else:  # None has no __flags__ attr
-       h = getattr(obj, '__flags__', 0) & _Py_TPFLAGS_HEAPTYPE
-    if h:
-       s += sizes._sizeof_CPyGC_Head
-     # include reference counters
-    return s + sizes._sizeof_Crefcounts
-
-def _derive_typedef(typ):
-    '''Return single, existing super type typedef or None.
-    '''
-    v = [v for v in compat._values(_typedefs) if _issubclass(typ, v.type)]
-    if len(v) == 1:
-        return v[0]
-    return None
-
-def _infer_dict(obj):
-    '''Return True for likely dict object.
-    '''
-    for ats in (('__len__', 'get', 'has_key',     'items',     'keys',     'values'),
-                ('__len__', 'get', 'has_key', 'iteritems', 'iterkeys', 'itervalues')):
-        for a in ats:  # no all(<generator_expression>) in Python 2.2
-            if not compat._callable(getattr(obj, a, None)):
-                break
-        else:  # all True
-            return True
-    return False
-
-def _isdictclass(obj):
-    '''Return True for known dict objects.
-    '''
-    c = getattr(obj, '__class__', None)
-    return c and c.__name__ in _dict_classes.get(c.__module__, ())
-
-def _issubclass(sub, sup):
-    '''Safe issubclass().
-    '''
-    if sup is not object:
-        try:
-            return issubclass(sub, sup)
-        except TypeError:
-            pass
-    return False
-
-def _itemsize(t, item=0):
-    '''Get non-zero itemsize of type.
-    '''
-     # replace zero value with default
-    return getattr(t, '__itemsize__', 0) or item
 
 def _kwdstr(**kwds):
     '''Keyword arguments as a string.
@@ -263,7 +194,7 @@ def _lengstr(obj):
     n = leng(obj)
     if n is None:  # no len
        r = ''
-    elif n > typeinfo._len(obj):  # extended
+    elif n > type_common._len(obj):  # extended
        r = ' leng %d!' % n
     else:
        r = ' leng %d' % n
@@ -340,586 +271,6 @@ def _SI2(size, **kwds):
     '''
     return str(size) + _SI(size, **kwds)
 
-# more private functions and classes
-
-_old_style = '*'  # marker
-_new_style = ''   # no marker
-
-class _Claskey(object):
-    '''Wrapper for class objects.
-    '''
-    __slots__ = ('_obj', '_sty')
-
-    def __init__(self, obj, style):
-        self._obj = obj  # XXX Weakref.ref(obj)
-        self._sty = style
-
-    def __str__(self):
-        r = str(self._obj)
-        if r.endswith('>'):
-            r = '%s%s def>' % (r[:-1], self._sty)
-        elif self._sty is _old_style and not r.startswith('class '):
-            r = 'class %s%s def' % (r, self._sty)
-        else:
-            r = '%s%s def' % (r, self._sty)
-        return r
-    __repr__ = __str__
-
- # For most objects, the object type is used as the key in the
- # _typedefs dict further below, except class and type objects
- # and old-style instances.  Those are wrapped with separate
- # _Claskey or _Instkey instances to be able (1) to distinguish
- # instances of different old-style classes by class, (2) to
- # distinguish class (and type) instances from class (and type)
- # definitions for new-style classes and (3) provide similar
- # results for repr() and str() of new- and old-style classes
- # and instances.
-
-_claskeys = {}  # [id(obj)] = _Claskey()
-
-def _claskey(obj, style):
-    '''Wrap an old- or new-style class object.
-    '''
-    i =  id(obj)
-    k = _claskeys.get(i, None)
-    if not k:
-        _claskeys[i] = k = _Claskey(obj, style)
-    return k
-
-try:  # no Class- and InstanceType in Python 3.0
-    _Types_ClassType    = Types.ClassType
-    _Types_InstanceType = Types.InstanceType
-
-    class _Instkey(object):
-        '''Wrapper for old-style class (instances).
-        '''
-        __slots__ = ('_obj',)
-
-        def __init__(self, obj):
-            self._obj = obj  # XXX Weakref.ref(obj)
-
-        def __str__(self):
-            return '<class %s.%s%s>' % (self._obj.__module__, self._obj.__name__, _old_style)
-        __repr__ = __str__
-
-    _instkeys = {}  # [id(obj)] = _Instkey()
-
-    def _instkey(obj):
-        '''Wrap an old-style class (instance).
-        '''
-        i =  id(obj)
-        k = _instkeys.get(i, None)
-        if not k:
-            _instkeys[i] = k = _Instkey(obj)
-        return k
-
-    def _keytuple(obj):
-        '''Return class and instance keys for a class.
-        '''
-        t = type(obj)
-        if t is _Types_InstanceType:
-            t = obj.__class__
-            return _claskey(t,   _old_style), _instkey(t)
-        elif t is _Types_ClassType:
-            return _claskey(obj, _old_style), _instkey(obj)
-        elif t is _Type_type:
-            return _claskey(obj, _new_style), obj
-        return None, None  # not a class
-
-    def _objkey(obj):
-        '''Return the key for any object.
-        '''
-        k = type(obj)
-        if k is _Types_InstanceType:
-            k = _instkey(obj.__class__)
-        elif k is _Types_ClassType:
-            k = _claskey(obj, _old_style)
-        elif k is _Type_type:
-            k = _claskey(obj, _new_style)
-        return k
-
-except AttributeError:  # Python 3.0
-
-    def _keytuple(obj):  #PYCHOK expected
-        '''Return class and instance keys for a class.
-        '''
-        if type(obj) is _Type_type:  # isclass(obj):
-            return _claskey(obj, _new_style), obj
-        return None, None  # not a class
-
-    def _objkey(obj):  #PYCHOK expected
-        '''Return the key for any object.
-        '''
-        k = type(obj)
-        if k is _Type_type:  # isclass(obj):
-            k = _claskey(obj, _new_style)
-        return k
-
- # kinds of _Typedefs
-_i = compat._intern
-_all_kinds = (_kind_static, _kind_dynamic, _kind_derived, _kind_ignored, _kind_inferred) = (
-                _i('static'), _i('dynamic'), _i('derived'), _i('ignored'), _i('inferred'))
-del _i
-
-class _Typedef(object):
-    '''Type definition class.
-    '''
-    __slots__ = {
-        'base': 0,     # basic size in bytes
-        'item': 0,     # item size in bytes
-        'leng': None,  # or typeinfo._len_...() function
-        'refs': None,  # or _..._refs() function
-        'both': None,  # both data and code if True, code only if False
-        'kind': None,  # _kind_... value
-        'type': None}  # original type
-
-    def __init__(self, **kwds):
-        self.reset(**kwds)
-
-    def __lt__(self, unused):  # for Python 3.0
-        return True
-
-    def __repr__(self):
-        return repr(self.args())
-
-    def __str__(self):
-        t = [str(self.base), str(self.item)]
-        for f in (self.leng, self.refs):
-            if f:
-                t.append(f.__name__)
-            else:
-                t.append('n/a')
-        if not self.both:
-            t.append('(code only)')
-        return ', '.join(t)
-
-    def args(self):  # as args tuple
-        '''Return all attributes as arguments tuple.
-        '''
-        return (self.base, self.item, self.leng, self.refs,
-                self.both, self.kind, self.type)
-
-    def dup(self, other=None, **kwds):
-        '''Duplicate attributes of dict or other typedef.
-        '''
-        if other is None:
-            d = _dict_typedef.kwds()
-        else:
-            d =  other.kwds()
-        d.update(kwds)
-        self.reset(**d)
-
-    def flat(self, obj, mask=0):
-        '''Return the aligned flat size.
-        '''
-        s = self.base
-        if self.leng and self.item > 0:  # include items
-            s += self.leng(obj) * self.item
-        if compat._getsizeof:  # _getsizeof prevails
-            s = compat._getsizeof(obj, s)
-        if mask:  # align
-            s = (s + mask) & ~mask
-        return s
-
-    def format(self):
-        '''Return format dict.
-        '''
-        c = n = ''
-        if not self.both:
-            c = ' (code only)'
-        if self.leng:
-            n = ' (%s)' % common._nameof(self.leng)
-        return compat._kwds(base=self.base, item=self.item, leng=n,
-                     code=c,         kind=self.kind)
-
-    def kwds(self):
-        '''Return all attributes as keywords dict.
-        '''
-         # no dict(refs=self.refs, ..., kind=self.kind) in Python 2.0
-        return compat._kwds(base=self.base, item=self.item,
-                     leng=self.leng, refs=self.refs,
-                     both=self.both, kind=self.kind, type=self.type)
-
-    def save(self, t, base=0, heap=False):
-        '''Save this typedef plus its class typedef.
-        '''
-        c, k = _keytuple(t)
-        if k and k not in _typedefs:  # instance key
-            _typedefs[k] = self
-            if c and c not in _typedefs:  # class key
-                if t.__module__ in _builtin_modules:
-                    k = _kind_ignored  # default
-                else:
-                    k = self.kind
-                _typedefs[c] = _Typedef(base=_basicsize(type(t), base=base, heap=heap),
-                                        refs=typeinfo._type_refs,
-                                        both=False, kind=k, type=t)
-        elif isbuiltin(t) and t not in _typedefs:  # array, range, xrange in Python 2.x
-            _typedefs[t] = _Typedef(base=_basicsize(t, base=base),
-                                    both=False, kind=_kind_ignored, type=t)
-        else:
-            raise KeyError('asizeof typedef %r bad: %r %r' % (self, (c, k), self.both))
-
-    def set(self, safe_len=False, **kwds):
-        '''Set one or more attributes.
-        '''
-        if kwds:  # double check
-            d = self.kwds()
-            d.update(kwds)
-            self.reset(**d)
-        if safe_len and self.item:
-            self.leng = typeinfo._len
-
-    def reset(self, base=0, item=0, leng=None, refs=None,
-                                    both=True, kind=None, type=None):
-        '''Reset all specified attributes.
-        '''
-        if base < 0:
-            raise ValueError('invalid option: %s=%r' % ('base', base))
-        else:
-            self.base = base
-        if item < 0:
-            raise ValueError('invalid option: %s=%r' % ('item', item))
-        else:
-            self.item = item
-        if leng in typeinfo._all_lengs:  # XXX or compat._callable(leng)
-            self.leng = leng
-        else:
-            raise ValueError('invalid option: %s=%r' % ('leng', leng))
-        if refs in typeinfo._all_refs:  # XXX or compat._callable(refs)
-            self.refs = refs
-        else:
-            raise ValueError('invalid option: %s=%r' % ('refs', refs))
-        if both in (False, True):
-            self.both = both
-        else:
-            raise ValueError('invalid option: %s=%r' % ('both', both))
-        if kind in _all_kinds:
-            self.kind = kind
-        else:
-            raise ValueError('invalid option: %s=%r' % ('kind', kind))
-        self.type = type
-
-_typedefs = {}  # [key] = _Typedef()
-
-def _typedef_both(t, base=0, item=0, leng=None, refs=None, kind=_kind_static, heap=False):
-    '''Add new typedef for both data and code.
-    '''
-    v = _Typedef(base=_basicsize(t, base=base), item=_itemsize(t, item),
-                 refs=refs, leng=leng,
-                 both=True, kind=kind, type=t)
-    v.save(t, base=base, heap=heap)
-    return v  # for _dict_typedef
-
-def _typedef_code(t, base=0, refs=None, kind=_kind_static, heap=False):
-    '''Add new typedef for code only.
-    '''
-    v = _Typedef(base=_basicsize(t, base=base),
-                 refs=refs,
-                 both=False, kind=kind, type=t)
-    v.save(t, base=base, heap=heap)
-    return v  # for _dict_typedef
-
- # static typedefs for data and code types
-_typedef_both(complex)
-_typedef_both(float)
-_typedef_both(list,     refs=typeinfo._seq_refs, leng=typeinfo._len_list, item=sizes._sizeof_Cvoidp)  # sizeof(PyObject*)
-_typedef_both(tuple,    refs=typeinfo._seq_refs, leng=typeinfo._len,      item=sizes._sizeof_Cvoidp)  # sizeof(PyObject*)
-_typedef_both(property, refs=typeinfo._prop_refs)
-_typedef_both(type(Ellipsis))
-_typedef_both(type(None))
-
- # _Slots is a special tuple, see _Slots.__doc__
-_typedef_both(common._Slots, item=sizes._sizeof_Cvoidp,
-                      leng=typeinfo._len_slots,  # length less one
-                      refs=None,  # but no referents
-                      heap=True)  # plus head
-
- # dict, dictproxy, dict_proxy and other dict-like types
-_dict_typedef = _typedef_both(dict,        item=sizes._sizeof_CPyDictEntry, leng=typeinfo._len_dict, refs=typeinfo._dict_refs)
-try:  # <type dictproxy> only in Python 2.x
-    _typedef_both(Types.DictProxyType,     item=sizes._sizeof_CPyDictEntry, leng=typeinfo._len_dict, refs=typeinfo._dict_refs)
-except AttributeError:  # XXX any class __dict__ is <type dict_proxy> in Python 3.0?
-    _typedef_both(type(_Typedef.__dict__), item=sizes._sizeof_CPyDictEntry, leng=typeinfo._len_dict, refs=typeinfo._dict_refs)
- # other dict-like classes and types may be derived or inferred,
- # provided the module and class name is listed here (see functions
- # adict, _isdictclass and _infer_dict for further details)
-_dict_classes = {'UserDict': ('IterableUserDict',  'UserDict'),
-                 'weakref' : ('WeakKeyDictionary', 'WeakValueDictionary')}
-try:  # <type module> is essentially a dict
-    _typedef_both(Types.ModuleType, base=_dict_typedef.base,
-                                    item=_dict_typedef.item + sizes._sizeof_CPyModuleObject,
-                                    leng=typeinfo._len_module, refs=typeinfo._module_refs)
-except AttributeError:  # missing
-    pass
-
- # newer or obsolete types
-try:
-    from array import array  # array type
-    _typedef_both(array, leng=typeinfo._len_array, item=sizes._sizeof_Cbyte)
-except ImportError:  # missing
-    pass
-
-try:  # bool has non-zero __itemsize__ in 3.0
-    _typedef_both(bool)
-except NameError:  # missing
-    pass
-
-try:  # ignore basestring
-    _typedef_both(basestring, leng=None)
-except NameError:  # missing
-    pass
-
-try:
-    if isbuiltin(buffer):  # Python 2.2
-        _typedef_both(type(buffer('')), item=sizes._sizeof_Cbyte, leng=typeinfo._len)  # XXX len in bytes?
-    else:
-        _typedef_both(buffer,           item=sizes._sizeof_Cbyte, leng=typeinfo._len)  # XXX len in bytes?
-except NameError:  # missing
-    pass
-
-try:
-    _typedef_both(bytearray, item=sizes._sizeof_Cbyte, leng=typeinfo._len_bytearray)  #PYCHOK bytearray new in 2.6, 3.0
-except NameError:  # missing
-    pass
-try:
-    if type(bytes) is not type(str):  # bytes is str in 2.6 #PYCHOK bytes new in 2.6, 3.0
-      _typedef_both(bytes, item=sizes._sizeof_Cbyte, leng=typeinfo._len)  #PYCHOK bytes new in 2.6, 3.0
-except NameError:  # missing
-    pass
-try:  # XXX like bytes
-    _typedef_both(str8, item=sizes._sizeof_Cbyte, leng=typeinfo._len)  #PYCHOK str8 new in 2.6, 3.0
-except NameError:  # missing
-    pass
-
-try:
-    _typedef_both(enumerate, refs=typeinfo._enum_refs)
-except NameError:  # missing
-    pass
-
-try:  # Exception is type in Python 3.0
-    _typedef_both(Exception, refs=typeinfo._exc_refs)
-except:  # missing
-    pass  #PYCHOK OK
-
-try:
-    _typedef_both(file, refs=typeinfo._file_refs)
-except NameError:  # missing
-    pass
-
-try:
-    _typedef_both(frozenset, item=sizes._sizeof_Csetentry, leng=typeinfo._len_set, refs=typeinfo._seq_refs)
-except NameError:  # missing
-    pass
-try:
-    _typedef_both(set,       item=sizes._sizeof_Csetentry, leng=typeinfo._len_set, refs=typeinfo._seq_refs)
-except NameError:  # missing
-    pass
-
-try:  # not callable()
-    _typedef_both(Types.GetSetDescriptorType)
-except AttributeError:  # missing
-    pass
-
-try:  # if long exists, it is multi-precision ...
-    _typedef_both(long, item=sizes._sizeof_Cdigit, leng=typeinfo._len_int)
-    _typedef_both(int)  # ... and int is fixed size
-except NameError:  # no long, only multi-precision int in Python 3.0
-    _typedef_both(int,  item=sizes._sizeof_Cdigit, leng=typeinfo._len_int)
-
-try:  # not callable()
-    _typedef_both(Types.MemberDescriptorType)
-except AttributeError:  # missing
-    pass
-
-try:
-    _typedef_both(type(NotImplemented))  # == Types.NotImplementedType
-except NameError:  # missing
-    pass
-
-try:
-    _typedef_both(range)
-except NameError:  # missing
-    pass
-try:
-    _typedef_both(xrange)
-except NameError:  # missing
-    pass
-
-try:
-    _typedef_both(reversed, refs=typeinfo._enum_refs)
-except NameError:  # missing
-    pass
-
-try:
-    _typedef_both(slice, item=sizes._sizeof_Cvoidp, leng=typeinfo._len_slice)  # XXX worst-case itemsize?
-except NameError:  # missing
-    pass
-
-try:
-    from os import curdir, stat, statvfs
-    _typedef_both(type(stat(   curdir)), refs=typeinfo._stat_refs)     # stat_result
-    _typedef_both(type(statvfs(curdir)), refs=typeinfo._statvfs_refs,  # statvfs_result
-                                         item=sizes._sizeof_Cvoidp, leng=typeinfo._len)
-except ImportError:  # missing
-    pass
-
-try:
-    from struct import Struct  # only in Python 2.5 and 3.0
-    _typedef_both(Struct, item=sizes._sizeof_Cbyte, leng=typeinfo._len_struct)  # len in bytes
-except ImportError:  # missing
-    pass
-
-try:
-    _typedef_both(Types.TracebackType, refs=typeinfo._tb_refs)
-except AttributeError:  # missing
-    pass
-
-try:
-    _typedef_both(unicode, leng=typeinfo._len_unicode, item=sizes._sizeof_Cunicode)
-    _typedef_both(str,     leng=typeinfo._len,         item=sizes._sizeof_Cbyte)  # 1-byte char
-except NameError:  # str is unicode
-    _typedef_both(str,     leng=typeinfo._len_unicode, item=sizes._sizeof_Cunicode)
-
-try:  # <type 'KeyedRef'>
-    _typedef_both(Weakref.KeyedRef, refs=typeinfo._weak_refs, heap=True)  # plus head
-except AttributeError:  # missing
-    pass
-
-try:  # <type 'weakproxy'>
-    _typedef_both(Weakref.ProxyType)
-except AttributeError:  # missing
-    pass
-
-try:  # <type 'weakref'>
-    _typedef_both(Weakref.ReferenceType, refs=typeinfo._weak_refs)
-except AttributeError:  # missing
-    pass
-
- # some other, callable types
-_typedef_code(object,     kind=_kind_ignored)
-_typedef_code(super,      kind=_kind_ignored)
-_typedef_code(_Type_type, kind=_kind_ignored)
-
-try:
-    _typedef_code(classmethod, refs=typeinfo._im_refs)
-except NameError:
-    pass
-try:
-    _typedef_code(staticmethod, refs=typeinfo._im_refs)
-except NameError:
-    pass
-try:
-    _typedef_code(Types.MethodType, refs=typeinfo._im_refs)
-except NameError:
-    pass
-
-try:  # generator, code only, no len(), not callable()
-    _typedef_code(Types.GeneratorType, refs=typeinfo._gen_refs)
-except AttributeError:  # missing
-    pass
-
-try:  # <type 'weakcallableproxy'>
-    _typedef_code(Weakref.CallableProxyType, refs=typeinfo._weak_refs)
-except AttributeError:  # missing
-    pass
-
- # any type-specific iterators
-s = [compat._items({}), compat._keys({}), compat._values({})]
-try:  # reversed list and tuples iterators
-    s.extend([reversed([]), reversed(())])
-except NameError:  # missing
-    pass
-try:  # range iterator
-    s.append(xrange(1))
-except NameError:  # missing
-    pass
-try:  # callable-iterator
-    from re import finditer
-    s.append(finditer('', ''))
-except ImportError:  # missing
-    pass
-for t in compat._values(_typedefs):
-    if t.type and t.leng:
-        try:  # create an (empty) instance
-            s.append(t.type())
-        except TypeError:
-            pass
-for t in s:
-    try:
-        i = iter(t)
-        _typedef_both(type(i), leng=typeinfo._len_iter, refs=typeinfo._iter_refs, item=0)  # no itemsize!
-    except (KeyError, TypeError):  # ignore non-iterables, duplicates, etc.
-        pass
-del i, s, t
-
-
-def _typedef(obj, derive=False, infer=False):
-    '''Create a new typedef for an object.
-    '''
-    t =  type(obj)
-    v = _Typedef(base=_basicsize(t, obj=obj),
-                 kind=_kind_dynamic, type=t)
-  ##_printf('new %r %r/%r %s', t, _basicsize(t), _itemsize(t), common._repr(dir(obj)))
-    if ismodule(obj):  # handle module like dict
-        v.dup(item=_dict_typedef.item + sizes._sizeof_CPyModuleObject,
-              leng=typeinfo._len_module,
-              refs=typeinfo._module_refs)
-    elif isframe(obj):
-        v.set(base=_basicsize(t, base=sizes._sizeof_CPyFrameObject, obj=obj),
-              item=_itemsize(t),
-              leng=typeinfo._len_frame,
-              refs=typeinfo._frame_refs)
-    elif iscode(obj):
-        v.set(base=_basicsize(t, base=sizes._sizeof_CPyCodeObject, obj=obj),
-              item=sizes._sizeof_Cvoidp,
-              leng=typeinfo._len_code,
-              refs=typeinfo._co_refs,
-              both=False)  # code only
-    elif compat._callable(obj):
-        if isclass(obj):  # class or type
-            v.set(refs=typeinfo._class_refs,
-                  both=False)  # code only
-            if obj.__module__ in _builtin_modules:
-                v.set(kind=_kind_ignored)
-        elif isbuiltin(obj):  # function or method
-            v.set(both=False,  # code only
-                  kind=_kind_ignored)
-        elif isfunction(obj):
-            v.set(refs=typeinfo._func_refs,
-                  both=False)  # code only
-        elif ismethod(obj):
-            v.set(refs=typeinfo._im_refs,
-                  both=False)  # code only
-        elif isclass(t):  # callable instance, e.g. SCons,
-             # handle like any other instance further below
-            v.set(item=_itemsize(t), safe_len=True,
-                  refs=typeinfo._inst_refs)  # not code only!
-        else:
-            v.set(both=False)  # code only
-    elif _issubclass(t, dict):
-        v.dup(kind=_kind_derived)
-    elif _isdictclass(obj) or (infer and _infer_dict(obj)):
-        v.dup(kind=_kind_inferred)
-    elif getattr(obj, '__module__', None) in _builtin_modules:
-        v.set(kind=_kind_ignored)
-    else:  # assume an instance of some class
-        if derive:
-            p = _derive_typedef(t)
-            if p:  # duplicate parent
-                v.dup(other=p, kind=_kind_derived)
-                return v
-        if _issubclass(t, Exception):
-            v.set(item=_itemsize(t), safe_len=True,
-                  refs=typeinfo._exc_refs,
-                  kind=_kind_derived)
-        elif isinstance(obj, Exception):
-            v.set(item=_itemsize(t), safe_len=True,
-                  refs=typeinfo._exc_refs)
-        else:
-            v.set(item=_itemsize(t), safe_len=True,
-                  refs=typeinfo._inst_refs)
-    return v
 
 
 class _Prof(object):
@@ -1015,7 +366,7 @@ class Asizer(object):
     _depth     = 0  # recursion depth
     _duplicate = 0
     _excl_d    = None  # {}
-    _ign_d     = _kind_ignored
+    _ign_d     = type_repo._kind_ignored
     _incl      = ''  # or ' (incl. code)'
     _mask      = 7   # see _align_
     _missed    = 0   # due to errors
@@ -1082,13 +433,13 @@ class Asizer(object):
         else:
             self._seen[i] = 0
         try:
-            k, rs = _objkey(obj), []
+            k, rs = type_common._objkey(obj), []
             if k in self._excl_d:
                 self._excl_d[k] += 1
             else:
-                v = _typedefs.get(k, None)
+                v = type_repo._typedefs.get(k, None)
                 if not v:  # new typedef
-                    _typedefs[k] = v = _typedef(obj, derive=self._derive_,
+                    type_repo._typedefs[k] = v = type_spec._typedef(obj, derive=self._derive_,
                                                      infer=self._infer_)
                 if (v.both or self._code_) and v.kind is not self._ign_d:
                     s = f = v.flat(obj, self._mask)  # flat size
@@ -1195,7 +546,7 @@ class Asizer(object):
            calls to methods **asizeof** and **asizesof**.
         '''
         for o in objs:
-            for t in _keytuple(o):
+            for t in type_common._keytuple(o):
                 if t and t not in self._excl_d:
                     self._excl_d[t] = 0
 
@@ -1323,19 +674,19 @@ class Asizer(object):
 
                *print3options*  -- print options, as in Python 3.0
         '''
-        for k in _all_kinds:
+        for k in type_repo._all_kinds:
              # XXX Python 3.0 doesn't sort type objects
-            t = [(self._prepr(a), v) for a, v in compat._items(_typedefs) if v.kind == k and (v.both or self._code_)]
+            t = [(self._prepr(a), v) for a, v in compat._items(type_repo._typedefs) if v.kind == k and (v.both or self._code_)]
             if t:
                 _printf('%s%*d %s type%s:  basicsize, itemsize, _len_(), _refs()',
                          linesep, w, len(t), k, _plural(len(t)), **print3opts)
                 for a, v in compat._sorted(t):
                     _printf('%*s %s:  %s', w, '', a, v, **print3opts)
          # dict and dict-like classes
-        t = compat._sum([len(v) for v in compat._values(_dict_classes)])  # [] for Python 2.2
+        t = compat._sum([len(v) for v in compat._values(type_repo._dict_classes)])  # [] for Python 2.2
         if t:
             _printf('%s%*d dict/-like classes:', linesep, w, t, **print3opts)
-            for m, v in compat._items(_dict_classes):
+            for m, v in compat._items(type_repo._dict_classes):
                 _printf('%*s %s:  %s', w, '', m, self._prepr(v), **print3opts)
 
     def set(self, align=None, code=None, detail=None, limit=None, stats=None):
@@ -1432,7 +783,7 @@ class Asizer(object):
         self._limit_  = limit
         self._stats_  = stats
         if ignored:
-            self._ign_d = _kind_ignored
+            self._ign_d = type_repo._kind_ignored
         else:
             self._ign_d = None
          # clear state
@@ -1448,11 +799,11 @@ def adict(*classes):
     a = True
     for c in classes:
          # if class is dict-like, add class
-         # name to _dict_classes[module]
+         # name to type_repo._dict_classes[module]
         if isclass(c) and _infer_dict(c):
-            t = _dict_classes.get(c.__module__, ())
+            t = type_repo._dict_classes.get(c.__module__, ())
             if c.__name__ not in t:  # extend tuple
-                _dict_classes[c.__module__] = t + (c.__name__,)
+                type_repo._dict_classes[c.__module__] = t + (c.__name__,)
         else:  # not a dict-like class
             a = False
     return a  # all installed if True
@@ -1609,17 +960,6 @@ def asizesof(*objs, **opts):
         t = ()
     return t
 
-def _typedefof(obj, save=False, **opts):
-    '''Get the typedef for an object.
-    '''
-    k = _objkey(obj)
-    v = _typedefs.get(k, None)
-    if not v:  # new typedef
-        v = _typedef(obj, **opts)
-        if save:
-            _typedefs[k] = v
-    return v
-
 def basicsize(obj, **opts):
     '''Return the basic size of an object (in bytes).
 
@@ -1631,7 +971,7 @@ def basicsize(obj, **opts):
 
            *save=False*    -- save typedef if new
     '''
-    v = _typedefof(obj, **opts)
+    v = type_spec._typedefof(obj, **opts)
     if v:
         v = v.base
     return v
@@ -1644,7 +984,7 @@ def flatsize(obj, align=0, **opts):
        the other options.  See the documentation of
        this module for the definition of flat size.
     '''
-    v = _typedefof(obj, **opts)
+    v = type_spec._typedefof(obj, **opts)
     if v:
         if align > 1:
             m = align - 1
@@ -1661,7 +1001,7 @@ def itemsize(obj, **opts):
        See function **basicsize** for a description of
        the options.
     '''
-    v = _typedefof(obj, **opts)
+    v = type_spec._typedefof(obj, **opts)
     if v:
         v = v.item
     return v
@@ -1672,7 +1012,7 @@ def leng(obj, **opts):
        See function **basicsize** for a description of
        the options.
     '''
-    v = _typedefof(obj, **opts)
+    v = type_spec._typedefof(obj, **opts)
     if v:
         v = v.leng
         if v and compat._callable(v):
@@ -1686,7 +1026,7 @@ def refs(obj, **opts):
        See function **basicsize** for a description of
        the options.
     '''
-    v = _typedefof(obj, **opts)
+    v = type_spec._typedefof(obj, **opts)
     if v:
         v = v.refs
         if v and compat._callable(v):
@@ -1707,7 +1047,7 @@ def test_flatsize(failf=None, stdf=None):
     '''
     t, g, e = [], compat._getsizeof, 0
     if g:
-        for v in compat._values(_typedefs):
+        for v in compat._values(type_repo._typedefs):
             t.append(v.type)
             try:  # creating one instance
                 if v.type.__module__ not in ('io',):  # avoid 3.0 RuntimeWarning
@@ -1732,7 +1072,7 @@ def test_flatsize(failf=None, stdf=None):
                    type(o) in (bool,) and sys.version_info[0] == 3):
                     x = ', expected failure'
                 else:
-                    x = ', %r' % _typedefof(o)
+                    x = ', %r' % type_spec._typedefof(o)
                     e += 1
                     if failf:  # report failure
                        failf('%s vs %s for %s: %s',
@@ -1908,9 +1248,9 @@ if __name__ == '__main__':
         _printf('%sasizeof(%s) for (limit, code) in %s ... %s', linesep, '<callable>', '((0, False), (MAX, False), (MAX, True))', '-code')
         for o in (C, D, E, P, S, T,  # classes are callable
                   type,
-                 typeinfo._co_refs, typeinfo._dict_refs, typeinfo._inst_refs, typeinfo._len_int, typeinfo._seq_refs, lambda x: x,
-                (typeinfo._co_refs, typeinfo._dict_refs, typeinfo._inst_refs, typeinfo._len_int, typeinfo._seq_refs),
-                 _typedefs):
+                 type_spec._co_refs, type_spec._dict_refs, type_spec._inst_refs, type_spec._len_int, type_spec._seq_refs, lambda x: x,
+                (type_spec._co_refs, type_spec._dict_refs, type_spec._inst_refs, type_spec._len_int, type_spec._seq_refs),
+                 type_repo._typedefs):
             _print_asizeof(o)
 
     if _opts('-dict'):  # dict and UserDict examples
@@ -1928,7 +1268,7 @@ if __name__ == '__main__':
         for o in (dict(), _Dict(),
                   P.__dict__,  # dictproxy
                   Weakref.WeakKeyDictionary(), Weakref.WeakValueDictionary(),
-                 _typedefs):
+                 type_repo._typedefs):
             _print_asizeof(o, infer=True)
 
   ##if _opts('-gc'):  # gc examples
@@ -2059,10 +1399,10 @@ if __name__ == '__main__':
         _print_functions(sys.modules, 'sys.modules', opt='-sys')
 
     if _opts('-type', '-types', '-typedefs'):  # show all basic _typedefs
-        t = len(_typedefs)
+        t = len(type_repo._typedefs)
         w = len(str(t)) * ' '
         _printf('%s%d type definitions: basic- and itemsize (leng), kind ... %s', linesep, t, '-type[def]s')
-        for k, v in compat._sorted([(_prepr(k), v) for k, v in compat._items(_typedefs)]):  # [] for Python 2.2
+        for k, v in compat._sorted([(_prepr(k), v) for k, v in compat._items(type_repo._typedefs)]):  # [] for Python 2.2
             s = '%(base)s and %(item)s%(leng)s, %(kind)s%(code)s' % v.format()
             _printf('%s %s: %s', w, k, s)
 
