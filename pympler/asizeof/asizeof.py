@@ -169,6 +169,7 @@ import weakref  as     Weakref
 
 import common
 import compat
+import demos
 import sizes
 import type_common
 import type_repo
@@ -239,21 +240,6 @@ def _prepr(obj, clip=0):
     '''Prettify and clip long repr() string.
     '''
     return common._repr(obj, clip=clip).strip('<>').replace("'", '')  # remove <''>
-
-def _printf(fmt, *args, **print3opts):
-    '''Formatted print.
-    '''
-    if print3opts:  # like Python 3.0
-        f = print3opts.get('file', None) or sys.stdout
-        if args:
-            f.write(fmt % args)
-        else:
-            f.write(fmt)
-        f.write(print3opts.get('end', linesep))
-    elif args:
-        print(fmt % args)
-    else:
-        print(fmt)
 
 def _SI(size, K=1024, i='i'):
     '''Return size as SI string.
@@ -571,20 +557,20 @@ class Asizer(object):
                 c = int(c * 0.01 * self._total)
             else:
                 c = 0
-            _printf('%s%*d profile%s:  total%s, average, and largest flat size%s:  largest object',
+            common._printf('%s%*d profile%s:  total%s, average, and largest flat size%s:  largest object',
                      linesep, w, len(t), _plural(len(t)), s, self._incl, **print3opts)
             r = len(t)
             for v, k in compat._sorted(t, reverse=True):
                 s = 'object%(plural)s:  %(total)s, %(avg)s, %(high)s:  %(obj)s%(lengstr)s' % v.format(self._clip_, self._total)
-                _printf('%*d %s %s', w, v.number, self._prepr(k), s, **print3opts)
+                common._printf('%*d %s %s', w, v.number, self._prepr(k), s, **print3opts)
                 r -= 1
                 if r > 1 and v.total < c:
                     c = max(cutoff, self._cutoff)
-                    _printf('%+*d profiles below cutoff (%.0f%%)', w, r, c)
+                    common._printf('%+*d profiles below cutoff (%.0f%%)', w, r, c)
                     break
             z = len(self._profs) - len(t)
             if z > 0:
-                _printf('%+*d %r object%s', w, z, 'zero', _plural(z), **print3opts)
+                common._printf('%+*d %r object%s', w, z, 'zero', _plural(z), **print3opts)
 
     def print_stats(self, objs=(), opts={}, sized=(), sizes=(), stats=3.0, **print3opts):
         '''Print the statistics.
@@ -615,19 +601,19 @@ class Asizer(object):
             if sized and objs:
                 n = len(objs)
                 if n > 1:
-                    _printf('%sasized(...%s%s) ...', linesep, c, o, **print3opts)
+                    common._printf('%sasized(...%s%s) ...', linesep, c, o, **print3opts)
                     for i in range(n):  # no enumerate in Python 2.2.3
-                        _printf('%*d: %s', w-1, i, sized[i], **print3opts)
+                        common._printf('%*d: %s', w-1, i, sized[i], **print3opts)
                 else:
-                    _printf('%sasized(%s): %s', linesep, o, sized, **print3opts)
+                    common._printf('%sasized(%s): %s', linesep, o, sized, **print3opts)
             elif sizes and objs:
-                _printf('%sasizesof(...%s%s) ...', linesep, c, o, **print3opts)
+                common._printf('%sasizesof(...%s%s) ...', linesep, c, o, **print3opts)
                 for z, o in zip(sizes, objs):
-                    _printf('%*d bytes%s%s:  %s', w, z, _SI(z), self._incl, self._repr(o), **print3opts)
+                    common._printf('%*d bytes%s%s:  %s', w, z, _SI(z), self._incl, self._repr(o), **print3opts)
             else:
                 if objs:
                     t = self._repr(objs)
-                _printf('%sasizeof(%s%s%s) ...', linesep, t, c, o, **print3opts)
+                common._printf('%sasizeof(%s%s%s) ...', linesep, t, c, o, **print3opts)
              # print summary
             self.print_summary(w=w, objs=objs, **print3opts)
             if s > 1:  # print profile
@@ -645,27 +631,27 @@ class Asizer(object):
 
                *print3options*  -- print options, as in Python 3.0
         '''
-        _printf('%*d bytes%s%s', w, self._total, _SI(self._total), self._incl, **print3opts)
+        common._printf('%*d bytes%s%s', w, self._total, _SI(self._total), self._incl, **print3opts)
         if self._mask:
-            _printf('%*d byte aligned', w, self._mask + 1, **print3opts)
-        _printf('%*d byte sizeof(void*)', w, sizes._sizeof_Cvoidp, **print3opts)
+            common._printf('%*d byte aligned', w, self._mask + 1, **print3opts)
+        common._printf('%*d byte sizeof(void*)', w, sizes._sizeof_Cvoidp, **print3opts)
         n = len(objs or ())
         if n > 0:
             d = self._duplicate or ''
             if d:
                 d = ', %d duplicate' % self._duplicate
-            _printf('%*d object%s given%s', w, n, _plural(n), d, **print3opts)
+            common._printf('%*d object%s given%s', w, n, _plural(n), d, **print3opts)
         t = compat._sum([1 for t in compat._values(self._seen) if t != 0])  # [] for Python 2.2
-        _printf('%*d object%s sized', w, t, _plural(t), **print3opts)
+        common._printf('%*d object%s sized', w, t, _plural(t), **print3opts)
         if self._excl_d:
             t = compat._sum(compat._values(self._excl_d))
-            _printf('%*d object%s excluded', w, t, _plural(t), **print3opts)
+            common._printf('%*d object%s excluded', w, t, _plural(t), **print3opts)
         t = compat._sum(compat._values(self._seen))
-        _printf('%*d object%s seen', w, t, _plural(t), **print3opts)
+        common._printf('%*d object%s seen', w, t, _plural(t), **print3opts)
         if self._missed > 0:
-            _printf('%*d object%s missed', w, self._missed, _plural(self._missed), **print3opts)
+            common._printf('%*d object%s missed', w, self._missed, _plural(self._missed), **print3opts)
         if self._depth > 0:
-            _printf('%*d recursion depth', w, self._depth, **print3opts)
+            common._printf('%*d recursion depth', w, self._depth, **print3opts)
 
     def print_typedefs(self, w=0, **print3opts):
         '''Print the types and dict tables.
@@ -678,16 +664,16 @@ class Asizer(object):
              # XXX Python 3.0 doesn't sort type objects
             t = [(self._prepr(a), v) for a, v in compat._items(type_repo._typedefs) if v.kind == k and (v.both or self._code_)]
             if t:
-                _printf('%s%*d %s type%s:  basicsize, itemsize, _len_(), _refs()',
+                common._printf('%s%*d %s type%s:  basicsize, itemsize, _len_(), _refs()',
                          linesep, w, len(t), k, _plural(len(t)), **print3opts)
                 for a, v in compat._sorted(t):
-                    _printf('%*s %s:  %s', w, '', a, v, **print3opts)
+                    common._printf('%*s %s:  %s', w, '', a, v, **print3opts)
          # dict and dict-like classes
         t = compat._sum([len(v) for v in compat._values(type_repo._dict_classes)])  # [] for Python 2.2
         if t:
-            _printf('%s%*d dict/-like classes:', linesep, w, t, **print3opts)
+            common._printf('%s%*d dict/-like classes:', linesep, w, t, **print3opts)
             for m, v in compat._items(type_repo._dict_classes):
-                _printf('%*s %s:  %s', w, '', m, self._prepr(v), **print3opts)
+                common._printf('%*s %s:  %s', w, '', m, self._prepr(v), **print3opts)
 
     def set(self, align=None, code=None, detail=None, limit=None, stats=None):
         '''Set some options.  See also **reset**.
@@ -1078,7 +1064,7 @@ def test_flatsize(failf=None, stdf=None):
                        failf('%s vs %s for %s: %s',
                               a, s, common._nameof(type(o)), common._repr(o))
                 if stdf:
-                   _printf('flatsize() %s vs sys.getsizeof() %s for %s: %s%s',
+                   common._printf('flatsize() %s vs sys.getsizeof() %s for %s: %s%s',
                             a, s, common._nameof(type(o)), common._repr(o), x, file=stdf)
         compat._getsizeof = g  # restore
     return len(t), e
@@ -1087,24 +1073,6 @@ def test_flatsize(failf=None, stdf=None):
 if __name__ == '__main__':
 
     argv, MAX = sys.argv, sys.getrecursionlimit()
-
-    def _print_asizeof(obj, infer=False, stats=0):
-        a = [common._repr(obj),]
-        for d, c in ((0, False), (MAX, False), (MAX, True)):
-            a.append(asizeof(obj, limit=d, code=c, infer=infer, stats=stats))
-        _printf(" asizeof(%s) is %d, %d, %d", *a)
-
-    def _print_functions(obj, name=None, align=8, detail=MAX, code=False, limit=MAX,
-                              opt='', **unused):
-        if name:
-            _printf('%sasizeof functions for %s ... %s', linesep, name, opt)
-        _printf('%s(): %s', ' basicsize', basicsize(obj))
-        _printf('%s(): %s', ' itemsize',  itemsize(obj))
-        _printf('%s(): %r', ' leng',      leng(obj))
-        _printf('%s(): %s', ' refs',     common._repr(refs(obj)))
-        _printf('%s(): %s', ' flatsize',  flatsize(obj, align=align))  # , code=code
-        _printf('%s(): %s', ' asized',           asized(obj, align=align, detail=detail, code=code, limit=limit))
-      ##_printf('%s(): %s', '.asized',   _asizer.asized(obj, align=align, detail=detail, code=code, limit=limit))
 
     def _bool(arg):
         a = arg.lower()
@@ -1154,7 +1122,7 @@ if __name__ == '__main__':
             else:
                 o = __import__(m)
             s = asizeof(o, **opts)
-            _printf("%sasizeof(%s) is %d", linesep, common._repr(o, opts['clip']), s)
+            common._printf("%sasizeof(%s) is %d", linesep, common._repr(o, opts['clip']), s)
             _print_functions(o, **opts)
         argv = []
 
@@ -1183,238 +1151,77 @@ if __name__ == '__main__':
         w = -max([len(o) for o in compat._keys(d)])  # [] for Python 2.2
         t = compat._sorted(['%*s -- %s' % (w, o, t) for o, t in compat._items(d)])  # [] for Python 2.2
         t = '\n     '.join([''] + t)
-        _printf('usage: %s <option> ...\n%s\n', argv[0], t)
+        common._printf('usage: %s <option> ...\n%s\n', argv[0], t)
 
-    class C: pass
+        class C: pass
 
-    class D(dict):
-        _attr1 = None
-        _attr2 = None
+        class D(dict):
+          _attr1 = None
+          _attr2 = None
 
-    class E(D):
-        def __init__(self, a1=1, a2=2):  #PYCHOK OK
+        class E(D):
+          def __init__(self, a1=1, a2=2):  #PYCHOK OK
             self._attr1 = a1  #PYCHOK OK
             self._attr2 = a2  #PYCHOK OK
 
-    class P(object):
-        _p = None
-        def _get_p(self):
+        class P(object):
+          _p = None
+          def _get_p(self):
             return self._p
-        p = property(_get_p)  #PYCHOK OK
+          p = property(_get_p)  #PYCHOK OK
 
-    class O:  # old style
-        a = None
-        b = None
+        class O:  # old style
+          a = None
+          b = None
 
-    class S(object):  # new style
-        __slots__ = ('a', 'b')
+        class S(object):  # new style
+          __slots__ = ('a', 'b')
 
-    class T(object):
-        __slots__ = ('a', 'b')
-        def __init__(self):
+        class T(object):
+          __slots__ = ('a', 'b')
+          def __init__(self):
             self.a = self.b = 0
 
     if _opts('-all'):  # all=True example
-        _printf('%sasizeof(limit=%s, code=%s, %s) ... %s', linesep, 'MAX', True, 'all=True', '-all')
-        asizeof(limit=MAX, code=True, stats=MAX, all=True)
-
+        demos.all()
     if _opts('-basic'):  # basic examples
-        _printf('%sasizeof(%s) for (limit, code) in %s ... %s', linesep, '<basic_objects>', '((0, False), (MAX, False), (MAX, True))', '-basic')
-        for o in (None, True, False,
-                  1.0, 1.0e100, 1024, 1000000000,
-                  '', 'a', 'abcdefg',
-                  {}, (), []):
-            _print_asizeof(o, infer=True)
-
+        demos.basic()
     if _opts('-C'):  # show all Csizeof values
-        t = [t for t in sizes.__dict__.items() if t[0].startswith('_sizeof_')]
-        _printf('%s%d C sizes: (bytes) ... -C', linesep, len(t))
-        for n, v in compat._sorted(t):
-            _printf(' sizeof(%s): %r', n[len('_sizeof_'):], v)
-
+      demos.csizes()
     if _opts('-class'):  # class and instance examples
-        _printf('%sasizeof(%s) for (limit, code) in %s ... %s', linesep, '<non-callable>', '((0, False), (MAX, False), (MAX, True))', '-class')
-        for o in (C(), C.__dict__,
-                  D(), D.__dict__,
-                  E(), E.__dict__,
-                  P(), P.__dict__, P.p,
-                  O(), O.__dict__,
-                  S(), S.__dict__,
-                  S(), S.__dict__,
-                  T(), T.__dict__):
-            _print_asizeof(o, infer=True)
-
+      demos.classes()
     if _opts('-code'):  # code examples
-        _printf('%sasizeof(%s) for (limit, code) in %s ... %s', linesep, '<callable>', '((0, False), (MAX, False), (MAX, True))', '-code')
-        for o in (C, D, E, P, S, T,  # classes are callable
-                  type,
-                 type_spec._co_refs, type_spec._dict_refs, type_spec._inst_refs, type_spec._len_int, type_spec._seq_refs, lambda x: x,
-                (type_spec._co_refs, type_spec._dict_refs, type_spec._inst_refs, type_spec._len_int, type_spec._seq_refs),
-                 type_repo._typedefs):
-            _print_asizeof(o)
-
+      demos.code()
     if _opts('-dict'):  # dict and UserDict examples
-        _printf('%sasizeof(%s) for (limit, code) in %s ... %s', linesep, '<Dicts>', '((0, False), (MAX, False), (MAX, True))', '-dict')
-        try:
-            import UserDict  # no UserDict in 3.0
-            for o in (UserDict.IterableUserDict(), UserDict.UserDict()):
-                _print_asizeof(o)
-        except ImportError:
-            pass
-
-        class _Dict(dict):
-            pass
-
-        for o in (dict(), _Dict(),
-                  P.__dict__,  # dictproxy
-                  Weakref.WeakKeyDictionary(), Weakref.WeakValueDictionary(),
-                 type_repo._typedefs):
-            _print_asizeof(o, infer=True)
-
+      demos.dict_()
   ##if _opts('-gc'):  # gc examples
-      ##_printf('%sasizeof(limit=%s, code=%s, *%s) ...', linesep, 'MAX', False, 'gc.garbage')
+      ##common._printf('%sasizeof(limit=%s, code=%s, *%s) ...', linesep, 'MAX', False, 'gc.garbage')
       ##from gc import collect, garbage  # list()
       ##asizeof(limit=MAX, code=False, stats=1, *garbage)
       ##collect()
       ##asizeof(limit=MAX, code=False, stats=2, *garbage)
-
     if _opts('-gen', '-generator'):  # generator examples
-        _printf('%sasizeof(%s, code=%s) ... %s', linesep, '<generator>', True, '-gen[erator]')
-        def gen(x):
-            i = 0
-            while i < x:
-                yield i
-                i += 1
-        a = gen(5)
-        b = gen(50)
-        asizeof(a, code=True, stats=1)
-        asizeof(b, code=True, stats=1)
-        asizeof(a, code=True, stats=1)
-
+      demos.generator()
     if _opts('-glob', '-globals'):  # globals examples
-        _printf('%sasizeof(%s, limit=%s, code=%s) ... %s', linesep, 'globals()', 'MAX', False, '-glob[als]')
-        asizeof(globals(), limit=MAX, code=False, stats=1)
-        _print_functions(globals(), 'globals()', opt='-glob[als]')
-
-        _printf('%sasizesof(%s, limit=%s, code=%s) ... %s', linesep, 'globals(), locals()', 'MAX', False, '-glob[als]')
-        asizesof(globals(), locals(), limit=MAX, code=False, stats=1)
-        asized(globals(), align=0, detail=MAX, limit=MAX, code=False, stats=1)
-
+      demos.globals_()
     if _opts('-int', '-long'):  # int and long examples
-        try:
-            _L5d  = long(1) << 64
-            _L17d = long(1) << 256
-            t = '<int>/<long>'
-        except NameError:
-            _L5d  = 1 << 64
-            _L17d = 1 << 256
-            t = '<int>'
-
-        _printf('%sasizeof(%s, align=%s, limit=%s) ... %s', linesep, t, 0, 0, '-int')
-        for o in (1024, 1000000000,
-                  1.0, 1.0e100, 1024, 1000000000,
-                  MAX, 1 << 32, _L5d, -_L5d, _L17d, -_L17d):
-            _printf(" asizeof(%s) is %s (%s + %s * %s)", common._repr(o), asizeof(o, align=0, limit=0),
-                                                         basicsize(o), leng(o), itemsize(o))
-
+      demos.int_long()
     if _opts('-iter', '-iterator'):  # iterator examples
-        _printf('%sasizeof(%s, code=%s) ... %s', linesep, '<iterator>', False, '-iter[ator]')
-        o = iter('0123456789')
-        e = iter('')
-        d = iter({})
-        i = iter(compat._items({1:1}))
-        k = iter(compat._keys({2:2, 3:3}))
-        v = iter(compat._values({4:4, 5:5, 6:6}))
-        l = iter([])
-        t = iter(())
-        asizesof(o, e, d, i, k, v, l, t, limit=0, code=False, stats=1)
-        asizesof(o, e, d, i, k, v, l, t, limit=9, code=False, stats=1)
-
+      demos.iter_()
     if _opts('-loc', '-locals'):  # locals examples
-        _printf('%sasizeof(%s, limit=%s, code=%s) ... %s', linesep, 'locals()', 'MAX', False, '-loc[als]')
-        asizeof(locals(), limit=MAX, code=False, stats=1)
-        _print_functions(locals(), 'locals()', opt='-loc[als]')
-
+      demos.loc()
     if _opts('-pair', '-pairs'):  # key pair examples
-         # <http://jjinux.blogspot.com/2008/08/python-memory-conservation-tip.html>
-        _printf('%sasizeof(%s) vs asizeof(%s) ... %s', linesep, 'dict[i][j]', 'dict[(i,j)]', '-pair[s]')
-        n = m = 200
-
-        p = {}  # [i][j]
-        for i in range(n):
-            q = {}
-            for j in range(m):
-                q[j] = None
-            p[i] = q
-        p = asizeof(p, stats=1)
-
-        t = {}  # [(i,j)]
-        for i in range(n):
-            for j in range(m):
-                t[(i,j)] = None
-        t = asizeof(t, stats=1)
-
-        _printf('%sasizeof(dict[i][j]) is %s of asizeof(dict[(i,j)])', linesep, _p100(p, t))
-
+      demos.pair()
     if _opts('-slots'):  # slots examples
-        _printf('%sasizeof(%s, code=%s) ... %s', linesep, '<__slots__>', False, '-slots')
-        class Old:
-            pass  # m = None
-        class New(object):
-            __slots__ = ('n',)
-        class Sub(New):  #PYCHOK OK
-            __slots__ = {'s': ''}  # duplicate!
-            def __init__(self):  #PYCHOK OK
-                New.__init__(self)
-         # basic instance sizes
-        o, n, s = Old(), New(), Sub()
-        asizesof(o, n, s, limit=MAX, code=False, stats=1)
-         # with unique min attr size
-        o.o = 'o'
-        n.n = 'n'
-        s.n = 'S'
-        s.s = 's'
-        asizesof(o, n, s, limit=MAX, code=False, stats=1)
-         # with duplicate, intern'ed, 1-char string attrs
-        o.o = 'x'
-        n.n = 'x'
-        s.n = 'x'
-        s.s = 'x'
-        asizesof(o, n, s, 'x', limit=MAX, code=False, stats=1)
-         # with larger attr size
-        o.o = 'o'*1000
-        n.n = 'n'*1000
-        s.n = 'n'*1000
-        s.s = 's'*1000
-        asizesof(o, n, s, 'x'*1000, limit=MAX, code=False, stats=1)
-
+      demos.slots()
     if _opts('-stack'):  # stack examples
-        _printf('%sasizeof(%s, limit=%s, code=%s) ... %s', linesep, 'stack(MAX)', 'MAX', False, '')
-        asizeof(stack(MAX), limit=MAX, code=False, stats=1)
-        _print_functions(stack(MAX), 'stack(MAX)', opt='-stack')
-
+      demos.stack()
     if _opts('-sys'):  # sys.modules examples
-        _printf('%sasizeof(limit=%s, code=%s, *%s) ... %s', linesep, 'MAX', False, 'sys.modules.values()', '-sys')
-        asizeof(limit=MAX, code=False, stats=1, *sys.modules.values())
-        _print_functions(sys.modules, 'sys.modules', opt='-sys')
-
+      demos.sys_()
     if _opts('-type', '-types', '-typedefs'):  # show all basic _typedefs
-        t = len(type_repo._typedefs)
-        w = len(str(t)) * ' '
-        _printf('%s%d type definitions: basic- and itemsize (leng), kind ... %s', linesep, t, '-type[def]s')
-        for k, v in compat._sorted([(_prepr(k), v) for k, v in compat._items(type_repo._typedefs)]):  # [] for Python 2.2
-            s = '%(base)s and %(item)s%(leng)s, %(kind)s%(code)s' % v.format()
-            _printf('%s %s: %s', w, k, s)
-
+      demos.types()
     if _opts('-test'):
-        _printf('%sflatsize() vs sys.getsizeof() ... %s', linesep, '-test')
-        n, e = test_flatsize(stdf=sys.stdout)
-        if e:
-            _printf('%s%d of %d tests failed or %s', linesep, e, n, _p100(e, n))
-        elif compat._getsizeof:
-            _printf('no unexpected failures in %d tests', n)
-        else:
-            _printf('no sys.%s() in this python %s', 'getsizeof', sys.version.split()[0])
+      demos.test()
 
 
 # License file from an earlier version of this source file follows:
