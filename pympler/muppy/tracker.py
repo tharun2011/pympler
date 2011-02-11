@@ -178,7 +178,11 @@ class ObjectTracker(object):
         """
         def remove_ignore(objects, ignore=[]):
             # remove all objects listed in the ignore list
-            return [o for o in objects if o not in ignore]
+            res = []            
+            for o in objects:
+                if not muppy.object_in_list(o, ignore):
+                    res.append(o)
+            return res
     
         tmp = gc.get_objects()
         ignore.append(inspect.currentframe()) #PYCHOK change ignore
