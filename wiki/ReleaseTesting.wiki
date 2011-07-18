@@ -77,7 +77,7 @@ cd ..
 == pympler 0.2.0rc2 ==
 
 || || *Python 2.4* || *Python 2.5* || *Python 2.6* || *Python 2.7* || *Python3.1* || *Python 3.2* ||
-|| Ubuntu 10.04 32bit || || || || || || ||
+|| Ubuntu 10.04 32bit || issue 39 || PASSED || PASSED || PASSED || PASSED || issue 40 ||
 || Ubuntu/Debian 64bit || || || || || || ||
 || Windows XP 32bit || || || || || || ||
 || Windows 7 32bit || || || || || || ||
