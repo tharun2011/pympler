@@ -81,7 +81,7 @@ cd ..
 || Ubuntu/Debian 64bit || || || || || || ||
 || Windows XP 32bit || || || || || || ||
 || Windows 7 32bit || || || || || || ||
-|| Windows 7 64bit || || || || || || ||
+|| Windows 7 64bit || || || PASSED || || PASSED || ||
 || MacOS X 10.5 32bit || || || || || || ||
 || Solaris 10 || || || || || || ||
 
@@ -99,15 +99,3 @@ cd ..
 || MacOS X  10.4.11 (Intel) 32bit ||  PASSED || PASSED  || PASSED ||
 || Windows XP 32bit || PASSED* ||  PASSED  || PASSED ||
 || Solaris  10 (x86 Opteron) 32bit ||  PASSED  || PASSED  || PASSED ||
-
-== pympler trunk ==
-
-|| || *Python 2.4* || *Python 2.5* || *Python 2.6* ||
-|| Ubuntu 8.10 32bit ||  ||  ||  ||
-|| Ubuntu 8.10 64bit ||  ||  ||  ||
-|| Debian 64bit ||  ||  ||  ||
-
-|| || *Python 2.4* || *Python 2.4* (ActiveState)|| *Python 2.5* || *Python 2.5* (ActiveState)|| *Python 2.6* || *Python 2.6* (ActiveState)||
-|| MacOS X  10.4.11 (Intel) 32bit ||   ||   ||  ||  ||  ||  ||
-|| Windows XP 32bit ||  ||  ||  ||  ||   ||  ||
-|| Solaris  10 (x86 Opteron) 32bit ||  ||  ||  ||  ||  ||  ||
