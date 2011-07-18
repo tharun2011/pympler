@@ -74,6 +74,17 @@ cd ..
 
 = Test Matrix =
 
+== pympler 0.2.0rc1 ==
+
+|| || *Python 2.4* || *Python 2.5* || *Python 2.6* || *Python 2.7* || *Python3.1* || *Python 3.2* ||
+|| Ubuntu 10.04 32bit || || || || || || ||
+|| Ubuntu/Debian 64bit || || || || || || ||
+|| Windows XP 32bit || || || || || || ||
+|| Windows 7 32bit || || || || || || ||
+|| Windows 7 64bit || || || issue 38 || || || ||
+|| MacOS X 10.5 32bit || || || || || || ||
+|| Solaris 10 || || || || || || ||
+
 == pympler 0.1 ==
 
 || || *Python 2.4* || *Python 2.5* || *Python 2.6* ||
