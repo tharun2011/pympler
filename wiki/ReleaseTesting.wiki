@@ -72,7 +72,8 @@ cd ..
 || Windows XP 32bit || || || || || || ||
 || Windows 7 32bit || || || || || || ||
 || Windows 7 64bit || || || || || || ||
-|| MacOS X 10.5 32bit || || || || || || ||
+|| MacOS X 10.6 32bit || || PASSED || || || || ||
+|| MacOS X 10.6 64bit || || || issue 41 || || || ||
 || Solaris 10 || || || || || || ||
 
 == pympler 0.2.0rc2 ==
