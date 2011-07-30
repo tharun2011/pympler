@@ -70,7 +70,7 @@ cd ..
 || Ubuntu 10.04 32bit || PASSED || PASSED || PASSED || PASSED || PASSED || PASSED ||
 || Ubuntu/Debian 64bit || || || || || || ||
 || Windows XP 32bit || || || || || || ||
-|| Windows 7 32bit || || || || || || ||
+|| Windows 7 32bit || || issue 42 ^[AP]^ || || issue 42 ^[AP]^ || || ||
 || Windows 7 64bit || || || PASSED || issue 42 ^[AP]^ || PASSED || issue 42 ^[AP]^ ||
 || MacOS X 10.6 32bit || || PASSED || || || || ||
 || MacOS X 10.6 64bit || || || issue 41 || || || ||
