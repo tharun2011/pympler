@@ -71,10 +71,12 @@ cd ..
 || Ubuntu/Debian 64bit || || || || || || ||
 || Windows XP 32bit || || || || || || ||
 || Windows 7 32bit || || || || || || ||
-|| Windows 7 64bit || || || || || || ||
+|| Windows 7 64bit || || || PASSED || issue 42 ^[AP]^ || PASSED || issue 42 ^[AP]^ ||
 || MacOS X 10.6 32bit || || PASSED || || || || ||
 || MacOS X 10.6 64bit || || || issue 41 || || || ||
 || Solaris 10 || || || || || || ||
+
+`[AP]` ActivePython including pywin32 extension
 
 == pympler 0.2.0rc2 ==
 
