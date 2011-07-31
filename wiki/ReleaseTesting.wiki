@@ -39,12 +39,12 @@ svn move https://pympler.googlecode.com/svn/tags/0.1rc1 https://pympler.googleco
       * Write 'PASSED' to the associated cell in the test matrix
 
 {{{
-svn checkout http://pympler.googlecode.com/svn/tags/0.2.0rc3 pympler0.2
+svn checkout http://pympler.googlecode.com/svn/tags/0.2.0rc4 pympler0.2
 cd pympler0.2
 python run.py --dist --html --keep
 }}}
 
-If you have Bash, you can also run from within the working copy root folder:
+If you have Bash, you can also run the whole test suite for every installed Python version from within the working copy root folder:
 
 {{{
 bash tools/release_testing.sh
@@ -64,17 +64,26 @@ cd ..
 
 = Test Matrix =
 
-== pympler 0.2.0rc3 ==
+== pympler 0.2.0rc4 ==
 
 || || *Python 2.4* || *Python 2.5* || *Python 2.6* || *Python 2.7* || *Python3.1* || *Python 3.2* ||
 || Ubuntu 10.04 32bit || PASSED || PASSED || PASSED || PASSED || PASSED || PASSED ||
 || Ubuntu/Debian 64bit || || || || || || ||
 || Windows XP 32bit || || || || || || ||
+|| Windows 7 32bit || || || || || || ||
+|| Windows 7 64bit || || || || || || ||
+|| MacOS X 10.6 32bit || || || || || || ||
+|| MacOS X 10.6 64bit || || || || || || ||
+|| Solaris 10 || || || || || || ||
+
+== pympler 0.2.0rc3 ==
+
+|| || *Python 2.4* || *Python 2.5* || *Python 2.6* || *Python 2.7* || *Python3.1* || *Python 3.2* ||
+|| Ubuntu 10.04 32bit || PASSED || PASSED || PASSED || PASSED || PASSED || PASSED ||
 || Windows 7 32bit || || issue 42 ^[AP]^ || || issue 42 ^[AP]^ || || ||
 || Windows 7 64bit || || || PASSED || issue 42 ^[AP]^ || PASSED || issue 42 ^[AP]^ ||
 || MacOS X 10.6 32bit || || PASSED || || || || ||
 || MacOS X 10.6 64bit || || || issue 41 || || || ||
-|| Solaris 10 || || || || || || ||
 
 `[AP]` ActivePython including pywin32 extension
 
